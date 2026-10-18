@@ -9,11 +9,7 @@ import type { LiveBoardSnapshot, Task } from "../contracts/board.js";
 import type { Snapshot } from "../contracts/agent.js";
 import type { TaskChatLink } from "../contracts/task-agent.js";
 import { verdictToken } from "./task-verdict.js";
-import { spawn } from "node:child_process";
-import { mkdtemp, rm, stat } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
-import { prepareTaskContext } from "../../agent/tasks/task-context.js";
+import { localAdminCookieToken, localAuthTestEnvironment } from "../auth/test-support.js";
 
 let servers: Server[];
 let db: BoardDatabase;
@@ -29,8 +25,8 @@ const nativeChat = (started = true) => ({
   turns: started ? [{ id: randomUUID(), items: [{ type: "userMessage" }] }] : [],
 });
 const origin = "https://tasks.example.test";
-const headers = {
-  Cookie: "amazi_operations_session=test-session",
+let headers = {
+  Cookie: "",
   Origin: origin,
   "Content-Type": "application/json",
 };
@@ -69,17 +65,6 @@ beforeEach(async () => {
   calls = [];
   workerUnavailable = false;
   nativeChats = [nativeChat(), nativeChat(), nativeChat(false)];
-  const auth = express();
-  auth.get("/auth/session", (_req, res) =>
-    res.json({
-      user: {
-        id: "11111111-1111-4111-8111-111111111111",
-        name: "Admin",
-        email: null,
-        role: "admin",
-      },
-    }),
-  );
   const worker = express();
   worker.use(express.json());
   worker.use((req, res, next) => {
@@ -108,11 +93,16 @@ beforeEach(async () => {
   worker.post("/chats/:id/messages", (_req, res) => res.sendStatus(202));
   db = new BoardDatabase(":memory:");
   config = parseInternalTasksEnvironment({
+    ...localAuthTestEnvironment,
     OPERATIONS_AGENT_PUBLIC_URL: origin,
-    OPERATIONS_AGENT_API_URL: await listen(auth),
     OPERATIONS_AGENT_WORKER_URL: await listen(worker),
     OPERATIONS_AGENT_WORKER_TOKEN: "x".repeat(32),
   });
+  headers = {
+    Cookie: `amazi_operations_session=${localAdminCookieToken(config)}`,
+    Origin: origin,
+    "Content-Type": "application/json",
+  };
   application = createApplication(config, db);
   base = await listen(application.app);
 });
@@ -235,74 +225,6 @@ it("keeps the previous association if worker validation fails", async () => {
     (await call(`/board/cards/${card.id}/chats`, { chatId: nativeChats[1]!.id })).status,
   ).toBe(503);
   expect((await read<LiveBoardSnapshot>("/board")).taskChats).toEqual([previous]);
-});
-
-it("saves a scoped verdict through the real Gateway helper and invalidates board SSE state", async () => {
-  const card = await task();
-  const chatId = nativeChats[0]!.id;
-  await link(card.id, chatId);
-  const before = await read<LiveBoardSnapshot>("/board");
-  const directory = await mkdtemp(join(tmpdir(), "task-verdict-"));
-  try {
-    const token = verdictToken(config.workerToken, card.id, chatId, card.revision);
-    const context = await prepareTaskContext(
-      {
-        task: card,
-        tags: [],
-        url: origin,
-        verdict: {
-          url: `${base}/api/agent/tasks/${card.id}/verdict`,
-          token,
-          chatId,
-          revision: card.revision,
-        },
-      },
-      directory,
-    );
-    expect(JSON.stringify(context)).not.toContain(token);
-    expect("saveVerdictCommand" in context).toBe(true);
-    const command = (context as { saveVerdictCommand: string }).saveVerdictCommand;
-    const configFile = command.split("'")[3]!;
-    expect((await stat(configFile)).mode & 0o777).toBe(0o600);
-    const run = () =>
-      new Promise<{ code: number | null; output: string }>((resolve) => {
-        const child = spawn("sh", ["-c", command.replace(" < verdict.txt", "")]);
-        let output = "";
-        child.stdout.on("data", (chunk: Buffer) => {
-          output += chunk.toString();
-        });
-        child.stderr.on("data", (chunk: Buffer) => {
-          output += chunk.toString();
-        });
-        child.on("close", (code) => resolve({ code, output }));
-        child.stdin.end("Ready for implementation. Scope agreed; no blockers.");
-      });
-    const result = await run();
-    expect(result.code, result.output).toBe(0);
-    expect(JSON.parse(result.output)).toMatchObject({ saved: true, taskId: card.id });
-    const after = await read<LiveBoardSnapshot>("/board");
-    expect(after.version).not.toBe(before.version);
-    expect(after.cards[0]).toMatchObject({
-      agentVerdict: "Ready for implementation. Scope agreed; no blockers.",
-      revision: card.revision + 1,
-      status: card.status,
-    });
-    expect((await run()).code).toBe(0);
-    const events = await read<{ type: string; payload: { actor: string } }[]>(
-      `/board/cards/${card.id}/events`,
-    );
-    expect(events.filter((event) => event.payload.actor === "Codex")).toHaveLength(1);
-    await read(`/board/cards/${card.id}`, {
-      title: "Updated requirements",
-      revision: card.revision + 1,
-    });
-    const stale = await run();
-    expect(stale.code).toBe(1);
-    expect(stale.output).toContain("fresh task snapshot");
-    expect(stale.output).not.toContain(token);
-  } finally {
-    await rm(directory, { recursive: true, force: true });
-  }
 });
 
 it("rejects forged, cross-task, oversized and unlinked verdict writes", async () => {

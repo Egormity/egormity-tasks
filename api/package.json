@@ -7,19 +7,14 @@
     "node": ">=24"
   },
   "scripts": {
-    "dev": "tsx dev.ts",
-    "build": "npm run build:web && npm run build:api && npm run build:agent",
-    "build:web": "vite build",
-    "build:api": "node build.mjs api",
-    "build:agent": "node build.mjs agent",
+    "dev": "npm run build:api && npm run start:api",
+    "build": "npm run build:api",
+    "build:api": "node build.mjs",
     "start:api": "node dist/api/main.js",
-    "start:agent": "node dist/agent/main.js",
     "typecheck": "tsc6 --noEmit",
-    "lint": "eslint src dev.ts && prettier --check .",
-    "format": "prettier --write .",
-    "test": "vitest run",
-    "test:codex": "TEST_NATIVE_CODEX=1 vitest run native.test.ts",
-    "generate:codex": "node generate-codex-types.mjs"
+    "lint": "eslint src/api && prettier --check src/api",
+    "format": "prettier --write src/api",
+    "test": "vitest run --config vitest.config.ts"
   },
   "devDependencies": {
     "@dnd-kit/react": "^0.5.0",

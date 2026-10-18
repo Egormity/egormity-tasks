@@ -4,6 +4,7 @@ import { afterEach, expect, it } from "vitest";
 import { parseInternalTasksEnvironment } from "../config.js";
 import { createApplication } from "../app.js";
 import { BoardDatabase } from "../board/database.js";
+import { localAdminCookieToken, localAuthTestEnvironment } from "../auth/test-support.js";
 
 const servers: Server[] = [];
 const listen = async (app: express.Express) => {
@@ -22,17 +23,6 @@ afterEach(async () => {
 });
 
 it("relays binary uploads and native SSE through administrator auth without storing chat data", async () => {
-  const auth = express();
-  auth.get("/auth/session", (_req, res) =>
-    res.json({
-      user: {
-        id: "11111111-1111-4111-8111-111111111111",
-        name: "Admin",
-        email: null,
-        role: "admin",
-      },
-    }),
-  );
   const gateway = express();
   let credential: string | undefined;
   gateway.post(
@@ -50,15 +40,14 @@ it("relays binary uploads and native SSE through administrator auth without stor
     res.end();
   });
   const db = new BoardDatabase(":memory:");
-  const app = createApplication(
-    parseInternalTasksEnvironment({
-      OPERATIONS_AGENT_PUBLIC_URL: "https://tasks.example.test",
-      OPERATIONS_AGENT_API_URL: await listen(auth),
-      OPERATIONS_AGENT_WORKER_URL: await listen(gateway),
-      OPERATIONS_AGENT_WORKER_TOKEN: "x".repeat(32),
-    }),
-    db,
-  );
+  const config = parseInternalTasksEnvironment({
+    ...localAuthTestEnvironment,
+    OPERATIONS_AGENT_PUBLIC_URL: "https://tasks.example.test",
+    OPERATIONS_AGENT_WORKER_URL: await listen(gateway),
+    OPERATIONS_AGENT_WORKER_TOKEN: "x".repeat(32),
+  });
+  const token = localAdminCookieToken(config);
+  const app = createApplication(config, db);
   const base = await listen(app.app);
   try {
     expect((await fetch(base + "/api/events")).status).toBe(401);
@@ -66,7 +55,7 @@ it("relays binary uploads and native SSE through administrator auth without stor
     const response = await fetch(base + "/api/chats/native/files", {
       method: "POST",
       headers: {
-        Cookie: "amazi_operations_session=valid-session",
+        Cookie: `amazi_operations_session=${token}`,
         Origin: "https://tasks.example.test",
         "Content-Type": "application/octet-stream",
         "X-File-Name": "example.bin",
@@ -76,7 +65,7 @@ it("relays binary uploads and native SSE through administrator auth without stor
     expect(response.status).toBe(200);
     expect(Buffer.from(await response.arrayBuffer())).toEqual(bytes);
     const stream = await fetch(base + "/api/events", {
-      headers: { Cookie: "amazi_operations_session=valid-session" },
+      headers: { Cookie: `amazi_operations_session=${token}` },
     });
     expect(stream.headers.get("content-type")).toContain("text/event-stream");
     expect(await stream.text()).toContain("item/agentMessage/delta");

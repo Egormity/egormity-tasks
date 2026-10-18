@@ -36,7 +36,7 @@ const mount = () =>
   render(
     <PreferencesProvider>
       <WorkspaceNavigation
-        user={{ id: "admin", name: "Администратор", email: null }}
+        user={{ id: "admin", name: "Администратор", email: "admin@example" }}
         page="agent"
         agentHref={agentHref}
         onLogout={vi.fn()}

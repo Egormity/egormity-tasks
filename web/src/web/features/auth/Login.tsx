@@ -40,7 +40,8 @@ export const Login = ({ onLogin }: { onLogin: (user: User) => void }) => {
             <input
               className="border-line bg-canvas outline-accent rounded-lg border p-3"
               name="email"
-              type="email"
+              type="text"
+              inputMode="email"
               autoComplete="username"
               required
               disabled={pending}

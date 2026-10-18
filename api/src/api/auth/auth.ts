@@ -1,12 +1,35 @@
+import { createHash, createHmac, randomUUID, scryptSync, timingSafeEqual } from "node:crypto";
 import type { InternalTasksEnvironment } from "../config.js";
 import { internalTasksPolicy as policy } from "../contracts/policy.js";
 import type { NextFunction, Request, Response } from "express";
+import { z } from "zod";
+import { loginRequestSchema, userSchema, type User } from "../contracts/auth.js";
 
-import {
-  authSessionSchema,
-  browserSessionSchema,
-  loginRequestSchema,
-} from "../contracts/auth.js";
+const sessionSchema = userSchema.extend({ expiresAt: z.number().int(), nonce: z.uuid() });
+
+const makeUserId = (email: string) => {
+  const hex = createHash("sha256").update(email).digest("hex").slice(0, 32).split("");
+  hex[12] = "5";
+  hex[16] = ((parseInt(hex[16]!, 16) & 3) | 8).toString(16);
+  const value = hex.join("");
+  return `${value.slice(0, 8)}-${value.slice(8, 12)}-${value.slice(12, 16)}-${value.slice(16, 20)}-${value.slice(20)}`;
+};
+
+export const localAdminUser = (
+  config: Pick<InternalTasksEnvironment, "adminEmail" | "adminName">,
+): User => ({
+  id: makeUserId(config.adminEmail),
+  name: config.adminName,
+  email: config.adminEmail,
+});
+
+export const createSessionToken = (user: User, secret: string, expiresAt: number) => {
+  const payload = Buffer.from(
+    JSON.stringify({ ...user, expiresAt, nonce: randomUUID() }),
+  ).toString("base64url");
+  const signature = createHmac("sha256", secret).update(payload).digest("base64url");
+  return `${payload}.${signature}`;
+};
 
 export class HttpError extends Error {
   constructor(
@@ -27,20 +50,12 @@ export const readToken = (request: Request) => {
 
 export class AdminAuthentication {
   private readonly attempts = new Map<string, { count: number; reset: number }>();
+  private readonly revoked = new Map<string, number>();
+  private readonly user: User;
 
-  constructor(private readonly config: InternalTasksEnvironment) {}
-
-  private request = async (path: string, init: RequestInit) => {
-    try {
-      return await fetch(`${this.config.apiUrl}/auth/${path}`, {
-        ...init,
-        redirect: "error",
-        signal: AbortSignal.timeout(policy.requestTimeoutMilliseconds),
-      });
-    } catch {
-      throw new HttpError(503, "Amazi authentication is temporarily unavailable.");
-    }
-  };
+  constructor(private readonly config: InternalTasksEnvironment) {
+    this.user = localAdminUser(config);
+  }
 
   private setCookie = (response: Response, token: string) =>
     response.cookie(policy.cookieName, token, {
@@ -51,20 +66,42 @@ export class AdminAuthentication {
       maxAge: token ? policy.cookieMaxAgeMilliseconds : 0,
     });
 
-  verify = async (request: Request) => {
+  private verifyToken = (token: string) => {
+    const [payload, signature, extra] = token.split(".");
+    if (!payload || !signature || extra !== undefined || this.revoked.has(token)) return null;
+    const expected = createHmac("sha256", this.config.sessionSecret)
+      .update(payload)
+      .digest("base64url");
+    const actualBytes = Buffer.from(signature);
+    const expectedBytes = Buffer.from(expected);
+    if (
+      actualBytes.length !== expectedBytes.length ||
+      !timingSafeEqual(actualBytes, expectedBytes)
+    )
+      return null;
+    try {
+      const decoded = sessionSchema.parse(
+        JSON.parse(Buffer.from(payload, "base64url").toString()),
+      );
+      if (
+        decoded.expiresAt <= Date.now() ||
+        decoded.id !== this.user.id ||
+        decoded.email !== this.user.email ||
+        decoded.name !== this.user.name
+      )
+        return null;
+      return this.user;
+    } catch {
+      return null;
+    }
+  };
+
+  verify = (request: Request) => {
     const token = readToken(request);
-    if (!token) throw new HttpError(401, "Sign in with an Amazi administrator account.");
-    const result = await this.request("session", {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    if (result.status === 401 || result.status === 403)
-      throw new HttpError(401, "Your session has expired. Sign in again.");
-    if (!result.ok)
-      throw new HttpError(503, "Amazi authentication is temporarily unavailable.");
-    const session = browserSessionSchema.parse(await result.json());
-    if (session.user.role !== "admin")
-      throw new HttpError(403, "Administrator access is required.");
-    return { id: session.user.id, name: session.user.name, email: session.user.email };
+    const user = token ? this.verifyToken(token) : null;
+    if (!user)
+      throw new HttpError(401, "Your local administrator session has expired. Sign in again.");
+    return user;
   };
 
   requireAdmin = async (request: Request, response: Response, next: NextFunction) => {
@@ -79,6 +116,7 @@ export class AdminAuthentication {
   login = async (request: Request, response: Response) => {
     const now = Date.now();
     for (const [key, value] of this.attempts) if (value.reset <= now) this.attempts.delete(key);
+    for (const [key, expiry] of this.revoked) if (expiry <= now) this.revoked.delete(key);
     const key = request.ip ?? "unknown";
     const attempt = this.attempts.get(key) ?? {
       count: 0,
@@ -90,38 +128,31 @@ export class AdminAuthentication {
     this.attempts.set(key, attempt);
     const input = loginRequestSchema.safeParse(request.body);
     if (!input.success) throw new HttpError(400, "Enter a valid email and password.");
-    const result = await this.request("token", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(input.data),
-    });
-    if (result.status === 401 || result.status === 400)
+    const [saltValue, hashValue] = this.config.adminPasswordHash.split(".");
+    const salt = Buffer.from(saltValue!, "base64url");
+    const expected = Buffer.from(hashValue!, "base64url");
+    const actual = scryptSync(input.data.password, salt, expected.length);
+    if (
+      input.data.email.toLowerCase() !== this.user.email ||
+      !timingSafeEqual(actual, expected)
+    )
       throw new HttpError(401, "Invalid email or password.");
-    if (!result.ok)
-      throw new HttpError(
-        result.status === 429 ? 429 : 503,
-        "Unable to sign in. Try again later.",
-      );
-    const session = authSessionSchema.parse(await result.json());
-    if (session.user.role !== "admin") {
-      await this.request("logout", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${session.token}` },
-      });
-      throw new HttpError(403, "Administrator access is required.");
-    }
     this.attempts.delete(key);
-    this.setCookie(response, session.token);
-    response.json({ id: session.user.id, name: session.user.name, email: session.user.email });
+    this.setCookie(
+      response,
+      createSessionToken(
+        this.user,
+        this.config.sessionSecret,
+        now + policy.cookieMaxAgeMilliseconds,
+      ),
+    );
+    response.json(this.user);
   };
 
-  logout = async (request: Request, response: Response) => {
+  logout = (request: Request, response: Response) => {
     const token = readToken(request);
-    if (token)
-      await this.request("logout", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-      });
+    if (token) this.revoked.set(token, Date.now() + policy.cookieMaxAgeMilliseconds);
+    if (this.revoked.size > 10_000) this.revoked.delete(this.revoked.keys().next().value!);
     this.setCookie(response, "");
     response.sendStatus(204);
   };

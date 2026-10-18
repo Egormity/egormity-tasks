@@ -40,7 +40,8 @@ export const createApplication = (config: InternalTasksEnvironment, store: Board
     next();
   });
   // Gateway callbacks have a narrow task credential, separate from browser sessions/CSRF.
-  api.use(taskVerdictRoutes(config.workerToken, board, taskChats, boardEvents));
+  if (config.workerConfigured)
+    api.use(taskVerdictRoutes(config.workerToken, board, taskChats, boardEvents));
   api.use((request, _response, next) => {
     if (
       !["GET", "HEAD"].includes(request.method) &&
@@ -63,11 +64,17 @@ export const createApplication = (config: InternalTasksEnvironment, store: Board
   );
   api.use(authentication.requireAdmin);
   api.get("/session", (_request, response) => response.json(response.locals.user));
-  api.use(taskAgentRoutes(config, board, taskChats, boardEvents));
   api.use("/board", boardRoutes(board, boardEvents, taskChats));
-  api.use(taskContextRouting(board, taskChats, config.publicUrl, config.workerToken));
-  api.use(confirmationRoutes(config, workConfirmations));
-  api.use(workerRelay(config));
+  if (config.workerConfigured) {
+    api.use(taskAgentRoutes(config, board, taskChats, boardEvents));
+    api.use(taskContextRouting(board, taskChats, config.publicUrl, config.workerToken));
+    api.use(confirmationRoutes(config, workConfirmations));
+    api.use(workerRelay(config));
+  } else {
+    api.use((_request, _response, next) =>
+      next(new HttpError(503, "The Gateway worker is not configured.")),
+    );
+  }
   api.use((_request, _response, next) => next(new HttpError(404, "Endpoint not found.")));
   app.use(policy.apiPath, api);
   const errors: ErrorRequestHandler = (error: unknown, _request, response, _next) => {

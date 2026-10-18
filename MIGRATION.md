@@ -1,9 +1,10 @@
-# Internal Tasks migration
+# Historical data migration notes
 
-This repository is the new source home for the existing `tasks.amazi.pro` application. It includes
-`src/web`, `src/api`, the Gateway bridge in `src/agent`, shared API contracts, Dockerfiles and both
-host configurations. Source was imported from `amazi-internal-tasks` commit
-`a489e5d1e46265d34bee5373e244e0a0e425064f` (v0.19.2). The migrated version is v0.20.0.
+This runbook preserves the original import and verified database snapshot details. The current
+project has been simplified to the two independent application roots `web/` and `api/`; the former
+root-level monorepo source tree, Compose files, and standalone worker application have been removed.
+The source was originally imported from `amazi-internal-tasks` commit
+`a489e5d1e46265d34bee5373e244e0a0e425064f` (v0.19.2), then migrated as v0.20.0.
 
 ## Runtime compatibility
 
@@ -12,9 +13,10 @@ database filename and Compose project/router names are preserved. Image names no
 `egormity-tasks`. The production deployment directory can remain `/var/www/amazi-internal-tasks`;
 changing the source repository does not require relocating live data or changing DNS.
 
-Authentication still uses the configured Amazi `/auth/token` and `/auth/session` service.
-The API relays agent requests to the existing Gateway bridge. Secrets are configured independently
-in ignored `.env.api` and `.env.agent` files; neither credentials nor runtime data belong in Git.
+The API now owns local administrator authentication and does not call Amazi `/auth/token` or
+`/auth/session`. Its password verifier and session-signing secret are configured only in the API
+application's environment. Gateway chat routes remain optional and require both worker settings;
+there is no worker application in this project.
 
 The board database includes task cards, tags, comments, event history, attachment BLOBs and native
 chat associations. It does **not** include Codex's native conversation history, account profile,
@@ -56,9 +58,9 @@ claim a live production authentication or Gateway test. Details are stored in th
 
 ## Import into the new checkout
 
-Install dependencies with `npm ci`, then build using `npm run build`. Keep the destination API
-stopped for import. Restore into a new path; the command refuses to replace an existing database,
-including any WAL/SHM sidecars:
+Install dependencies separately with `npm ci` from `web/` and `api/`; build the API with
+`npm run build` from `api/`. Keep the destination API stopped for import. Restore into a new path;
+the command refuses to replace an existing database, including any WAL/SHM sidecars:
 
 ```sh
 python3 scripts/database_transfer.py restore \
@@ -73,9 +75,11 @@ references, table counts and logical checksums against the manifest before publi
 Use only trusted migration exports. Do not use the older `dist/api/import-main.js` JSON-bundle
 importer for this full SQLite/SQL export.
 
-Before starting the destination API, set the existing external authentication/Gateway settings and
-make the data directory and database writable by the API's UID/GID (1000 in Docker). Verify
-`/health` and an authenticated board read after start. Do not run two APIs against the same file.
+Before starting the destination API, configure the local administrator email, name, scrypt password
+verifier, and session-signing secret in the API environment. Gateway settings are optional for board
+and sign-in use. The production image uses `/data/chats.sqlite`; the development application uses
+`api/.runtime/data/chats.sqlite`. Verify `/health` and an authenticated board read after start. Do
+not run two APIs against the same SQLite file.
 
 This migration prepares source and data only. No DNS switch, production restart, remote Git push
 or new production deployment is performed. Since Main stays writable, take a fresh export during

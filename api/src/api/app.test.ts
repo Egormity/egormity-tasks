@@ -2,14 +2,17 @@ import { parseInternalTasksEnvironment, internalTasksPolicy as policy } from "./
 import express from "express";
 
 import type { Server } from "node:http";
-import { afterEach, beforeEach, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, expect, it } from "vitest";
 
 import type { BoardSnapshot, Task, TaskTag } from "./contracts/board.js";
 
-import * as tracker from "../web/features/board/data/tracker-api";
-
 import { createApplication } from "./app.js";
 import { BoardDatabase } from "./board/database.js";
+import {
+  localAdminCookieToken,
+  localAuthTestEnvironment,
+  testAdminPassword,
+} from "./auth/test-support.js";
 
 let servers: Server[];
 
@@ -19,24 +22,13 @@ let store: BoardDatabase;
 
 let base: string;
 
-let role: string;
-
 let heldResponse: express.Response | undefined;
 
 let runs: number;
 
 let workerAvailable: boolean;
 
-const token = "test-admin-session";
-
-const user = () => ({
-  id: "11111111-1111-4111-8111-111111111111",
-  name: "Administrator",
-  email: "admin@example.test",
-  role,
-  access: {},
-  supportRepliesAwaitingUserCount: 0,
-});
+let token: string;
 
 const listen = async (app: express.Express) => {
   const server = app.listen(0, "127.0.0.1");
@@ -65,15 +57,9 @@ const call = (
 
 beforeEach(async () => {
   servers = [];
-  role = "admin";
   runs = 0;
   workerAvailable = true;
   heldResponse = undefined;
-  const auth = express();
-  auth.use(express.json());
-  auth.post("/auth/token", (_request, response) => response.json({ token, user: user() }));
-  auth.get("/auth/session", (_request, response) => response.json({ user: user() }));
-  auth.post("/auth/logout", (_request, response) => response.sendStatus(204));
   const worker = express.Router();
   worker.use(express.json());
   worker.get("/status", (_request, response) =>
@@ -99,15 +85,14 @@ beforeEach(async () => {
   const gateway = express();
   gateway.use("/operations-agent", worker);
   store = new BoardDatabase(":memory:");
-  application = createApplication(
-    parseInternalTasksEnvironment({
-      OPERATIONS_AGENT_PUBLIC_URL: "https://operations.example.test/",
-      OPERATIONS_AGENT_API_URL: await listen(auth),
-      OPERATIONS_AGENT_WORKER_URL: `${await listen(gateway)}/operations-agent/`,
-      OPERATIONS_AGENT_WORKER_TOKEN: "x".repeat(32),
-    }),
-    store,
-  );
+  const config = parseInternalTasksEnvironment({
+    ...localAuthTestEnvironment,
+    OPERATIONS_AGENT_PUBLIC_URL: "https://operations.example.test/",
+    OPERATIONS_AGENT_WORKER_URL: `${await listen(gateway)}/operations-agent/`,
+    OPERATIONS_AGENT_WORKER_TOKEN: "x".repeat(32),
+  });
+  token = localAdminCookieToken(config);
+  application = createApplication(config, store);
   base = await listen(application.app);
 });
 
@@ -120,20 +105,29 @@ afterEach(async () => {
   }
 });
 
-it("protects all chat data, rejects non-admins, and rechecks revoked roles", async () => {
+it("protects all chat data and accepts only the configured local administrator", async () => {
   expect((await call("/chats", undefined, false)).status).toBe(401);
   expect((await call("/chats")).status).toBe(200);
-  role = "manager";
-  expect((await call("/chats")).status).toBe(403);
   expect(
-    (await call("/login", { email: "user@example.test", password: "password" }, false)).status,
-  ).toBe(403);
+    (await call("/login", { email: "admin@example", password: "wrong-password" }, false))
+      .status,
+  ).toBe(401);
+  const login = await call(
+    "/login",
+    { email: "admin@example", password: testAdminPassword },
+    false,
+  );
+  expect(login.status).toBe(200);
+  expect(await login.json()).toMatchObject({
+    email: "admin@example",
+    name: "Admin",
+  });
 });
 
 it("uses an HttpOnly secure cookie and rejects cross-origin mutations", async () => {
   const response = await call(
     "/login",
-    { email: "admin@example.test", password: "password" },
+    { email: "admin@example", password: testAdminPassword },
     false,
   );
   expect(response.status).toBe(200);
@@ -202,9 +196,8 @@ it("protects the board, preserves ordering, rejects stale edits and never launch
     tagIds: [tag.id],
   });
   expect(runs).toBe(0);
-  role = "user";
-  expect((await call("/board")).status).toBe(403);
-  expect((await call("/board/cards", input)).status).toBe(403);
+  expect((await call("/board")).status).toBe(200);
+  expect((await call("/board/cards", input, false)).status).toBe(401);
 });
 
 it("stores authenticated binary attachments and serves them only as downloads", async () => {
@@ -328,141 +321,4 @@ it("atomically saves content with attachment removal and detaches deleted tags w
       })
     ).status,
   ).toBe(409);
-});
-
-it("connects the copied frontend adapter to real HTTP storage without bypassing revisions", async () => {
-  const nativeFetch = globalThis.fetch;
-  vi.stubGlobal("fetch", (input: string | URL | Request, init?: RequestInit) => {
-    if (typeof input !== "string" || !input.startsWith("/")) return nativeFetch(input, init);
-    const headers = new Headers(init?.headers);
-    headers.set("Origin", "https://operations.example.test");
-    headers.set("Cookie", `${policy.cookieName}=${token}`);
-    return nativeFetch(new URL(input, base), { ...init, headers });
-  });
-  try {
-    const tag = await tracker.createTrackerTag("Frontend", "violet");
-    await tracker.getTrackerTags();
-    const created = await tracker.createTrackerCard({
-      title: "Copied card",
-      description: "Details",
-      tagIds: [tag.id],
-      attachments: [],
-    });
-    expect(created).toMatchObject({ status: "backlog", tags: [{ id: tag.id }] });
-    const original = (await tracker.getTrackerCards("active", "Frontend")).items[0]!;
-    const saved = await tracker.updateTrackerCard(original.id, {
-      revision: original.revision,
-      title: "Edited",
-      attachments: [],
-      tagIds: [tag.id],
-    });
-    await tracker.uploadTrackerCardAttachment(
-      saved.id,
-      "chosen-file",
-      new File(["hello"], "note.txt", { type: "text/plain" }),
-    );
-    const current = (await tracker.getTrackerCards("active", "Edited")).items[0]!;
-    expect(current.attachments[0]).toMatchObject({
-      id: "chosen-file",
-      name: "note.txt",
-      type: "text/plain",
-    });
-    expect(current.attachments[0]?.objectId).toBeTruthy();
-    expect(
-      await (await tracker.getTrackerCardAttachmentBlob(current.id, "chosen-file")).text(),
-    ).toBe("hello");
-    await expect(
-      tracker.updateTrackerCard(original.id, {
-        revision: original.revision,
-        title: "Lost update",
-      }),
-    ).rejects.toMatchObject({ status: 409 });
-    const archived = await tracker.archiveTrackerCard(current);
-    expect((await tracker.getTrackerCards("active", "")).items).toHaveLength(0);
-    expect((await tracker.getTrackerCards("archived", "")).items).toHaveLength(1);
-    const restored = await tracker.restoreTrackerCard(archived);
-    await tracker.updateTrackerCard(restored.id, {
-      revision: restored.revision,
-      attachments: [],
-    });
-    await tracker.deleteTrackerTag(tag.id);
-    const final = (await tracker.getTrackerCards("active", "")).items[0]!;
-    expect(final).toMatchObject({
-      title: "Edited",
-      tags: [],
-      attachments: [],
-      archivedAt: null,
-    });
-    expect((await tracker.getTrackerEvents(final.id)).items.length).toBeGreaterThan(4);
-    expect(runs).toBe(0);
-  } finally {
-    vi.unstubAllGlobals();
-    tracker.resetTrackerState();
-  }
-});
-
-it("persists the indicated sibling after a concurrent insertion and rejects a vanished target", async () => {
-  const nativeFetch = globalThis.fetch;
-  vi.stubGlobal("fetch", (input: string | URL | Request, init?: RequestInit) => {
-    if (typeof input !== "string" || !input.startsWith("/")) return nativeFetch(input, init);
-    const headers = new Headers(init?.headers);
-    headers.set("Origin", "https://operations.example.test");
-    headers.set("Cookie", `${policy.cookieName}=${token}`);
-    return nativeFetch(new URL(input, base), { ...init, headers });
-  });
-  try {
-    const create = async (title: string, status: string) =>
-      (await (
-        await call("/board/cards", {
-          title,
-          description: null,
-          priority: "medium",
-          status,
-          tagIds: [],
-        })
-      ).json()) as Task;
-    const source = await create("Dragged", "backlog");
-    const first = await create("First", "queue");
-    const target = await create("Target", "queue");
-    await tracker.getTrackerCards("active", "");
-    const concurrent = await create("Concurrent", "queue");
-    expect(
-      (
-        await call(`/board/cards/${concurrent.id}`, {
-          revision: concurrent.revision,
-          beforeId: target.id,
-        })
-      ).status,
-    ).toBe(200);
-    await tracker.getTrackerCards("active", "");
-    await tracker.updateTrackerCard(source.id, {
-      revision: source.revision,
-      status: "queue",
-      beforeId: target.id,
-    });
-    const board = (await tracker.getTrackerCards("active", "")).items;
-    expect(board.filter((card) => card.status === "queue").map((card) => card.id)).toEqual([
-      first.id,
-      concurrent.id,
-      source.id,
-      target.id,
-    ]);
-    const another = await create("Another drag", "backlog");
-    const currentTarget = board.find((card) => card.id === target.id)!;
-    await tracker.archiveTrackerCard(currentTarget);
-    await expect(
-      tracker.updateTrackerCard(another.id, {
-        revision: another.revision,
-        status: "queue",
-        beforeId: target.id,
-      }),
-    ).rejects.toMatchObject({ status: 409 });
-    expect(
-      (await tracker.getTrackerCards("active", "")).items.find((card) => card.id === another.id)
-        ?.status,
-    ).toBe("backlog");
-  } finally {
-    vi.unstubAllGlobals();
-    tracker.resetTrackerState();
-  }
 });

@@ -1,6 +1,6 @@
-package-lock.json
-pnpm-lock.yaml
-dist
-node_modules
-.runtime
-src/api/contracts/codex
+**/package-lock.json
+**/pnpm-lock.yaml
+**/dist/
+**/node_modules/
+**/.runtime/
+api/src/api/contracts/codex/

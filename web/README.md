@@ -1,12 +1,11 @@
 # Web application
 
-This is the standalone Amazi source root for the React/Vite frontend. Its interface is copied
-from `src/web`, and `src/api/contracts` is included as the frontend's transport-contract snapshot.
-The original monorepo source remains in `src/` unchanged.
+This is the standalone Amazi browser application. It contains the React task board and login screen;
+it has no server-side account or database code. The API owns administrator authentication and board
+data. Web and API share an origin through the configured `/api` proxy.
 
-In Amazi preview, Vite proxies `/api` to `OPERATIONS_AGENT_WEB_API_TARGET`. In a production
-container, the Nginx entrypoint proxies `/api` to `OPERATIONS_AGENT_PRODUCTION_API_TARGET`.
-`OPERATIONS_AGENT_PUBLIC_URL` must be the Web production origin so the API can validate the
-proxied request origin. These URLs are project settings, not source-code constants.
+`src/api/contracts/` is the Web copy of API-owned transport contracts; update it when the matching
+API contract changes. The application Dockerfile and Vite configuration live in this source root.
 
-Run `npm ci` and `npm run build:web` from this directory to verify the frontend bundle.
+The administrator signs in with the locally configured API account. No external identity-service
+credentials are sent to the browser.

@@ -8,6 +8,7 @@ import { BoardDatabase } from "../board/database.js";
 import { confirmationPolicy } from "./confirmation-store.js";
 import type { Task } from "../contracts/board.js";
 import { TaskChatStore } from "../task-agent/task-chat-store.js";
+import { localAdminCookieToken, localAuthTestEnvironment } from "./test-support.js";
 import {
   confirmationPath,
   type ConfirmationAction,
@@ -17,8 +18,8 @@ import {
 const servers: Server[] = [];
 let store: BoardDatabase;
 let base: string;
+let localConfig: ReturnType<typeof parseInternalTasksEnvironment>;
 let configured = true;
-let role = "admin";
 let deliveryStatus = 200;
 let delivered: {
   chat_id: string;
@@ -31,8 +32,7 @@ let legacyProfileHeaders: (string | undefined)[];
 let wrongTopic = false;
 let now: number;
 let activity: { id: string; status: string; completedAt: number | null } | null;
-const userId = randomUUID();
-const token = "test-session";
+let token = "";
 const action = (): ConfirmationAction => ({
   kind: "message",
   chatId: randomUUID(),
@@ -73,10 +73,6 @@ const prepare = async (input: ConfirmationAction) => {
   return { challenge, proof: { id: challenge.id, code: code() } };
 };
 const start = async () => {
-  const auth = express();
-  auth.get("/auth/session", (_req, res) =>
-    res.json({ user: { id: userId, name: "Test", email: "admin@example.test", role } }),
-  );
   const telegram = express();
   telegram.use(express.json());
   telegram.post("/sendMessage", (req, res) => {
@@ -106,23 +102,22 @@ const start = async () => {
   });
   const telegramUrl = await listen(telegram);
   store = new BoardDatabase(":memory:");
-  const { app } = createApplication(
-    parseInternalTasksEnvironment({
-      OPERATIONS_AGENT_PUBLIC_URL: "https://tasks.example.test",
-      OPERATIONS_AGENT_API_URL: await listen(auth),
-      OPERATIONS_AGENT_WORKER_URL: await listen(worker),
-      OPERATIONS_AGENT_WORKER_TOKEN: "x".repeat(32),
-      ...(configured
-        ? {
-            OPERATIONS_AGENT_TELEGRAM_URL: telegramUrl + "/sendMessage",
-            OPERATIONS_AGENT_TELEGRAM_TOKEN: "gateway-credential",
-            OPERATIONS_AGENT_TELEGRAM_CHAT_ID: "-1004381042765",
-            OPERATIONS_AGENT_TELEGRAM_THREAD_ID: "210",
-          }
-        : {}),
-    }),
-    store,
-  );
+  localConfig = parseInternalTasksEnvironment({
+    ...localAuthTestEnvironment,
+    OPERATIONS_AGENT_PUBLIC_URL: "https://tasks.example.test",
+    OPERATIONS_AGENT_WORKER_URL: await listen(worker),
+    OPERATIONS_AGENT_WORKER_TOKEN: "x".repeat(32),
+    ...(configured
+      ? {
+          OPERATIONS_AGENT_TELEGRAM_URL: telegramUrl + "/sendMessage",
+          OPERATIONS_AGENT_TELEGRAM_TOKEN: "gateway-credential",
+          OPERATIONS_AGENT_TELEGRAM_CHAT_ID: "-1004381042765",
+          OPERATIONS_AGENT_TELEGRAM_THREAD_ID: "210",
+        }
+      : {}),
+  });
+  token = localAdminCookieToken(localConfig);
+  const { app } = createApplication(localConfig, store);
   base = await listen(app);
 };
 
@@ -133,14 +128,12 @@ it("relays the read-only Codex status for admins without asking for a Telegram c
     { path: "/session-status", credential: `Bearer ${"x".repeat(32)}` },
   ]);
   expect(delivered).toHaveLength(0);
-  role = "user";
-  expect((await call("/session-status", undefined, "other-session")).status).toBe(403);
+  expect((await call("/session-status", undefined, "other-session")).status).toBe(401);
 });
 beforeEach(() => {
   now = Date.now();
   vi.spyOn(Date, "now").mockImplementation(() => now);
   configured = true;
-  role = "admin";
   deliveryStatus = 200;
   wrongTopic = false;
   delivered = [];
@@ -163,8 +156,7 @@ it("requires admin authentication and origin checks before sending any Telegram 
   expect((await call("/confirmations", action(), token, "https://attacker.test")).status).toBe(
     403,
   );
-  role = "user";
-  expect((await call("/confirmations", action())).status).toBe(403);
+  expect((await call("/confirmations", action(), "other-session")).status).toBe(401);
   expect(delivered).toHaveLength(0);
 });
 
@@ -285,7 +277,7 @@ it("binds codes to the browser session, message, request ID, attachments, model 
   const { proof } = await prepare(input);
   const path = confirmationPath(input);
   const body = { ...input.input, confirmation: proof };
-  expect((await call(path, body, "another-admin-session")).status).toBe(403);
+  expect((await call(path, body, localAdminCookieToken(localConfig))).status).toBe(403);
   expect((await call(path, { ...body, text: "Run an unrelated command" })).status).toBe(403);
   expect((await call(path, { ...body, requestId: randomUUID() })).status).toBe(403);
   expect((await call(path, { ...body, attachments: [randomUUID()] })).status).toBe(403);
@@ -401,7 +393,9 @@ it("keeps the incorrect-code limit across newly issued codes and browser session
       })
     ).status,
   ).toBe(429);
-  expect((await call("/confirmations", input, "fresh-session")).status).toBe(429);
+  expect((await call("/confirmations", input, localAdminCookieToken(localConfig))).status).toBe(
+    429,
+  );
   expect(forwarded).toHaveLength(0);
 });
 
@@ -459,9 +453,10 @@ it("keeps the verified browser unlocked during its native turn and five minutes 
   ).toBe(202);
   now += 2 * 60 * 60_000;
   expect(await (await call("/confirmations", input)).json()).toEqual({ confirmed: true });
-  expect((await call(confirmationPath(input), input.input, "another-session")).status).toBe(
-    403,
-  );
+  expect(
+    (await call(confirmationPath(input), input.input, localAdminCookieToken(localConfig)))
+      .status,
+  ).toBe(403);
   const reply: ConfirmationAction = {
     kind: "response",
     input: { id: 0, result: { action: "accept" } },

@@ -1,38 +1,23 @@
 import { expect, it } from "vitest";
 
-import { authSessionSchema, browserSessionSchema, loginRequestSchema } from "./auth.js";
+import { loginRequestSchema, userSchema } from "./auth.js";
 
 const user = {
   id: "11111111-1111-4111-8111-111111111111",
   name: "Administrator",
-  email: "admin@example.test",
-  role: "admin",
+  email: "admin@example",
 };
 
-it("accepts the external identity without depending on platform-specific session fields", () => {
-  expect(
-    browserSessionSchema.parse({ user: { ...user, access: { futureFlag: true } } }),
-  ).toEqual({
-    user,
+it("uses the local administrator profile and accepts the configured email identifier", () => {
+  expect(userSchema.parse(user)).toEqual(user);
+  expect(loginRequestSchema.parse({ email: "admin@example", password: "secret" })).toEqual({
+    email: "admin@example",
+    password: "secret",
   });
-  expect(authSessionSchema.parse({ user, token: "private-token" })).toEqual({
-    user,
-    token: "private-token",
-  });
-  expect(
-    browserSessionSchema.parse({ user: { ...user, email: null, role: "manager" } }).user.role,
-  ).toBe("manager");
 });
 
-it("requires a verifiable identity, explicit role, and nonempty login token", () => {
-  expect(browserSessionSchema.safeParse({ user: { ...user, id: "invalid" } }).success).toBe(
-    false,
-  );
-  expect(browserSessionSchema.safeParse({ user: { ...user, role: undefined } }).success).toBe(
-    false,
-  );
-  expect(authSessionSchema.safeParse({ user, token: "" }).success).toBe(false);
-  expect(authSessionSchema.safeParse({ user }).success).toBe(false);
+it("validates local login identifiers and passwords", () => {
+  expect(userSchema.safeParse({ ...user, id: "invalid" }).success).toBe(false);
   expect(loginRequestSchema.safeParse({ email: "invalid", password: "secret" }).success).toBe(
     false,
   );

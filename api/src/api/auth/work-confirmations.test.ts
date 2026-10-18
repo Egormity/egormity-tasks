@@ -5,6 +5,7 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { WorkConfirmations, workConfirmationGrace } from "./work-confirmations.js";
 import { parseInternalTasksEnvironment } from "../config.js";
 import type { ConfirmationAction } from "../contracts/confirmation.js";
+import { localAuthTestEnvironment } from "./test-support.js";
 
 const owner = { id: "admin", session: "session", name: "Admin", email: null };
 const action = (chatId: string = randomUUID()): ConfirmationAction => ({
@@ -48,6 +49,7 @@ beforeEach(async () => {
   if (!address || typeof address === "string") throw Error("Address");
   grants = new WorkConfirmations(
     parseInternalTasksEnvironment({
+      ...localAuthTestEnvironment,
       OPERATIONS_AGENT_WORKER_URL: `http://127.0.0.1:${address.port}`,
       OPERATIONS_AGENT_WORKER_TOKEN: "x".repeat(32),
     }),

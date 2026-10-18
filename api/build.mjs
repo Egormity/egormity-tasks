@@ -1,15 +1,10 @@
 import { build } from "esbuild";
-import { copyFile, rm } from "node:fs/promises";
+import { rm } from "node:fs/promises";
 
-const app = process.argv[2];
-if (app !== "api" && app !== "agent") throw new Error("Expected api or agent");
-const outdir = `dist/${app}`;
+const outdir = "dist/api";
 await rm(outdir, { recursive: true, force: true });
 await build({
-  entryPoints:
-    app === "api"
-      ? { main: "src/api/main.ts", "import-main": "src/api/board/import-main.ts" }
-      : { main: "src/agent/main.ts" },
+  entryPoints: { main: "src/api/main.ts", "import-main": "src/api/board/import-main.ts" },
   outdir,
   bundle: true,
   platform: "node",
@@ -18,5 +13,3 @@ await build({
   packages: "external",
   sourcemap: true,
 });
-if (app === "agent")
-  await copyFile("src/agent/tasks/submit-verdict.mjs", `${outdir}/submit-verdict.mjs`);

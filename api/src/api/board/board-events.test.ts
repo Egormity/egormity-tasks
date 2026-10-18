@@ -8,14 +8,14 @@ import type { LiveBoardSnapshot, Task, TaskTag } from "../contracts/board.js";
 import type { TaskComment } from "../contracts/task-comments.js";
 import { createHash, randomUUID } from "node:crypto";
 import { BoardDatabase } from "./database.js";
+import { localAdminCookieToken, localAuthTestEnvironment } from "../auth/test-support.js";
 
 let servers: Server[];
 let application: ReturnType<typeof createApplication>;
 let database: BoardDatabase;
 let base: string;
-let role: string;
 const origin = "https://tasks.example.test";
-const cookie = "amazi_operations_session=test-session";
+let cookie: string;
 const controllers: AbortController[] = [];
 const listen = async (app: express.Express) => {
   const server = app.listen(0, "127.0.0.1");
@@ -78,23 +78,15 @@ const connect = async () => {
 
 beforeEach(async () => {
   servers = [];
-  role = "admin";
-  const auth = express();
-  auth.get("/auth/session", (_request, response) =>
-    response.json({
-      user: { id: "11111111-1111-4111-8111-111111111111", name: "Admin", email: null, role },
-    }),
-  );
   database = new BoardDatabase(":memory:");
-  application = createApplication(
-    parseInternalTasksEnvironment({
-      OPERATIONS_AGENT_PUBLIC_URL: origin,
-      OPERATIONS_AGENT_API_URL: await listen(auth),
-      OPERATIONS_AGENT_WORKER_URL: "http://127.0.0.1:1",
-      OPERATIONS_AGENT_WORKER_TOKEN: "x".repeat(32),
-    }),
-    database,
-  );
+  const config = parseInternalTasksEnvironment({
+    ...localAuthTestEnvironment,
+    OPERATIONS_AGENT_PUBLIC_URL: origin,
+    OPERATIONS_AGENT_WORKER_URL: "http://127.0.0.1:1",
+    OPERATIONS_AGENT_WORKER_TOKEN: "x".repeat(32),
+  });
+  cookie = `amazi_operations_session=${localAdminCookieToken(config)}`;
+  application = createApplication(config, database);
   base = await listen(application.app);
 });
 
@@ -111,9 +103,6 @@ afterEach(async () => {
 
 it("authenticates board SSE and broadcasts each committed task, tag and attachment change to all clients", async () => {
   expect((await fetch(`${base}/api/board/events`)).status).toBe(401);
-  role = "manager";
-  expect((await call("/events")).status).toBe(403);
-  role = "admin";
   const first = await connect();
   const second = await connect();
   let previous = (await snapshot()).version;
@@ -185,8 +174,6 @@ it("authenticates board SSE and broadcasts each committed task, tag and attachme
   await call(`/cards/${task.id}`, { revision: task.revision, title: "While offline" });
   const reconnected = await connect();
   expect(await reconnected.next()).toBe((await snapshot()).version);
-  role = "manager";
-  expect((await call("/events")).status).toBe(403);
 });
 
 it("ends the authenticated stream after one minute and closes live connections on shutdown", async () => {
@@ -199,9 +186,6 @@ it("ends the authenticated stream after one minute and closes live connections o
     /* drain heartbeat comments */
   }
   vi.useRealTimers();
-  role = "manager";
-  expect((await call("/events")).status).toBe(403);
-  role = "admin";
   const resumed = await connect();
   await resumed.next();
   await application.close();
