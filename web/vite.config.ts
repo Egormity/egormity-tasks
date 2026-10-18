@@ -40,6 +40,8 @@ export default defineConfig({
     proxy: {
       [internalTasksPolicy.apiPath]: {
         target: apiTarget,
+        // The API's preview route is host-routed; preserve its upstream Host while proxying.
+        changeOrigin: true,
         configure: (proxy) => {
           // Preview traffic is proxied under the same public origin as production.
           proxy.on("proxyReq", (request) => request.setHeader("Origin", publicUrl));
