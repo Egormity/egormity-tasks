@@ -1,0 +1,15 @@
+node_modules/
+dist/
+.runtime/
+.env
+.env.*
+!.env.example
+coverage/
+*.tsbuildinfo
+*.log
+__pycache__/
+*.pyc
+*.sqlite
+*.sqlite-*
+*.sql
+*.sql.gz

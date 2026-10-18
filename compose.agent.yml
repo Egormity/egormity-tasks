@@ -1,0 +1,39 @@
+name: amazi-internal-tasks-agent
+services:
+  agent:
+    build:
+      context: .
+      dockerfile: agent.Dockerfile
+    image: egormity-tasks-agent:0.20.0
+    env_file: .env.agent
+    environment:
+      OPERATIONS_AGENT_WORKER_PORT: 3011
+      OPERATIONS_AGENT_REPOSITORY: /workspace/repository
+      OPERATIONS_AGENT_WORKTREES: /workspace/chats
+      OPERATIONS_AGENT_CODEX_HOME: /home/node/.codex
+      OPERATIONS_AGENT_INSTRUCTIONS_FILE: /app/agent-instructions.md
+      OPERATIONS_AGENT_SSH_KNOWN_HOSTS: /run/agent-ssh/known_hosts
+      OPERATIONS_AGENT_SANDBOX: danger-full-access
+    ports: ["127.0.0.1:3011:3011"]
+    volumes:
+      - ./.runtime/operations-agent/workspace:/workspace
+      - ./.runtime/operations-agent/codex:/home/node/.codex
+      - ./.runtime/operations-agent/ssh-access:/run/agent-ssh:ro
+      - ./src/agent/instructions/agent.md:/app/agent-instructions.md:ro
+    init: true
+    read_only: true
+    tmpfs: ["/tmp:size=128m,mode=1777"]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    restart: unless-stopped
+    healthcheck:
+      test:
+        [
+          CMD,
+          node,
+          -e,
+          "fetch('http://127.0.0.1:3011/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 9
