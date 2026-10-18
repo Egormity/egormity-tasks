@@ -21,3 +21,11 @@ Use reusable components, split files over 500 lines, and use apply_patch for tex
 Maintain Russian and English UI labels and light/dark themes.
 Run focused tests, typecheck and build before meaningful versioned local commits.
 Do not push, publish, deploy or create remote repositories without explicit authorization.
+
+## Amazi application roots
+
+The separately registered Amazi applications run from `web/` and `api/`. These folders are
+standalone copies of `src/web` and `src/api`; `web/src/api/contracts` is the frontend's copy of
+the shared transport contracts. The original `src/` tree remains intact for the imported
+repository and its Compose workflow. Keep corresponding behavior changes synchronized between
+the app roots and original sources when maintaining both deployment paths.

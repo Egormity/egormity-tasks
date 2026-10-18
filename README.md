@@ -45,6 +45,16 @@ files directly, without another package. Build output and launch commands are un
 See the [Web map](src/web/README.md), [API map](src/api/README.md) and
 [Gateway map](src/agent/README.md) for entry points, ownership and request flows.
 
+## Amazi applications
+
+The `web/` and `api/` directories are the separate Amazi application roots. They contain
+standalone copies of the frontend and API, with the shared frontend contracts included under
+`web/src/api/contracts`. The original monorepo sources under `src/` are preserved unchanged;
+runtime settings and app-specific Dockerfiles live in the two application roots. Amazi runs from
+those app roots; update the corresponding `src/` implementation too when keeping the imported
+Compose workflow in sync. See each app's README before editing its copy or configuring external
+services.
+
 The frontend and HTTP API are separate applications and containers on the main server at `tasks.amazi.pro`.
 Only Codex and its bridge run on Gateway. There are no imports from the Amazi monorepo.
 Administrator identity is validated through the external `/auth/token` and `/auth/session` endpoints.
