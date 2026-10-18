@@ -1,0 +1,49 @@
+name: amazi-internal-tasks
+services:
+  web:
+    build:
+      context: .
+      dockerfile: web.Dockerfile
+    image: egormity-tasks-web:0.20.0
+    ports: ["127.0.0.1:8080:8080"]
+    depends_on:
+      api:
+        condition: service_healthy
+    read_only: true
+    tmpfs: ["/tmp:size=32m"]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    restart: unless-stopped
+    healthcheck:
+      test: [CMD, wget, -q, --spider, "http://127.0.0.1:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 9
+  api:
+    build:
+      context: .
+      dockerfile: api.Dockerfile
+    image: egormity-tasks-api:0.20.0
+    env_file: .env.api
+    environment:
+      OPERATIONS_AGENT_PORT: 3010
+      OPERATIONS_AGENT_DATA_DIRECTORY: /data
+    ports: ["127.0.0.1:3010:3010"]
+    volumes: ["./.runtime/operations-agent/data:/data"]
+    init: true
+    read_only: true
+    tmpfs: ["/tmp:size=32m"]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    restart: unless-stopped
+    healthcheck:
+      test:
+        [
+          CMD,
+          node,
+          -e,
+          "fetch('http://127.0.0.1:3010/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 9
