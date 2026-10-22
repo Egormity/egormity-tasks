@@ -9,7 +9,8 @@ RUN npm run build:api && npm prune --omit=dev --no-audit --no-fund
 FROM node:24.19.0-bookworm-slim
 ENV NODE_ENV=production OPERATIONS_AGENT_DATA_DIRECTORY=/data
 WORKDIR /app
-RUN mkdir -p /data && chown node:node /data
+RUN mkdir -p /data && chown 65532:65532 /data
+VOLUME ["/data"]
 COPY --from=build /app/package.json ./
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/dist/api ./dist/api

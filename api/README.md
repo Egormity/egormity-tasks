@@ -14,7 +14,8 @@ The API stays useful for sign-in and board management when Gateway settings are 
 | `src/api/relay`      | Allowlisted streaming HTTP relay when a Gateway worker is configured                     |
 | `src/api/contracts`  | API transport schemas and Web-shared contracts                                           |
 
-`src/api/main.ts` reads configuration and opens `/data/chats.sqlite`; `src/api/app.ts` composes the
+`src/api/main.ts` reads configuration and opens `/data/chats.sqlite`; the production image declares
+`/data` as a durable volume owned by the runtime's numeric UID/GID 65532. `src/api/app.ts` composes the
 HTTP routes and security checks. Tests are kept beside their implementation.
 
 ## Local authorization
