@@ -3,7 +3,8 @@
 Frontend only. `main.tsx` initializes preferences and mounts `app/App.tsx`.
 `app/` owns login gating, the main sidebar and History API navigation. `AppLink` keeps internal
 links within the mounted application; modified clicks still open new tabs. Startup converts legacy
-hash links to `/tasks` or `/agent` URLs. `styles.css` owns shared theme tokens;
+hash links to `/tasks` or `/agent` URLs. The `/users` page is shown only to admins; the API also
+enforces that role. `styles.css` owns shared theme tokens;
 board-specific colors live in `features/board/board-theme.css`.
 
 | Directory                     | Responsibility                                                   |
@@ -24,12 +25,15 @@ board-specific colors live in `features/board/board-theme.css`.
 | `features/agent/requests`     | Blocking approvals, MCP elicitation and asynchronous questions   |
 | `features/agent/state`        | Snapshot/SSE reconciliation and native history merging           |
 | `features/auth`               | Administrator login screen                                       |
+| `features/users`              | Admin-only user table and create/edit dialog                     |
 | `features/confirmation`       | Telegram code dialog and confirmed-action submission             |
 | `shared`                      | HTTP/error handling, localization/preferences and reusable UI    |
 
 `@/` means this directory; `@contracts/` means `../api/contracts/`. Import shared transport types
 directly. Never import API implementations or Gateway modules into browser code.
 Task discussion reuses the same Agent page, conversation and composer; it is not a second chat UI.
+Managers and admins sign in through the same workspace form. Admins can create and edit admin or
+manager accounts; account passwords are supplied on creation and may be reset during editing.
 Context and conversation have separate React key prefixes for the same native thread. Live
 updates must keep one context panel mounted and preserve the conversation and composer draft.
 The `/status` composer command opens `composer/CodexStatus.tsx`, independently of the header's

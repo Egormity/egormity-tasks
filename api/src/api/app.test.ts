@@ -44,12 +44,13 @@ const call = (
   body?: unknown,
   authenticated = true,
   origin = "https://operations.example.test",
+  sessionToken = token,
 ) =>
   fetch(`${base}${policy.apiPath}${path}`, {
     method: body === undefined ? "GET" : "POST",
     headers: {
       Origin: origin,
-      ...(authenticated ? { Cookie: `${policy.cookieName}=${token}` } : {}),
+      ...(authenticated ? { Cookie: `${policy.cookieName}=${sessionToken}` } : {}),
       ...(body === undefined ? {} : { "Content-Type": "application/json" }),
     },
     ...(body === undefined ? {} : { body: JSON.stringify(body) }),
@@ -122,6 +123,74 @@ it("protects all chat data and accepts only the configured local administrator",
     email: "admin@example",
     name: "Admin",
   });
+});
+
+it("creates and edits users, applies roles to sign-in, and restricts user management to admins", async () => {
+  const initialUsers = await call("/users");
+  expect(initialUsers.status).toBe(200);
+  const listedUsers = (await initialUsers.json()) as Array<{ id: string; email: string }>;
+  expect(listedUsers).toMatchObject([{ email: "admin@example", name: "Admin", role: "admin" }]);
+  const selfRoleChange = await call(`/users/${listedUsers[0]!.id}`, {
+    name: "Admin",
+    email: "admin@example",
+    role: "manager",
+  });
+  expect(selfRoleChange.status).toBe(409);
+
+  const createdResponse = await call("/users", {
+    name: "Team Manager",
+    email: "Manager@Example.test",
+    role: "manager",
+    password: "manager-password-86f92e",
+  });
+  expect(createdResponse.status).toBe(201);
+  const created = (await createdResponse.json()) as {
+    id: string;
+    email: string;
+    name: string;
+    role: string;
+    password?: string;
+  };
+  expect(created).toMatchObject({
+    email: "manager@example.test",
+    name: "Team Manager",
+    role: "manager",
+  });
+  expect(created.password).toBeUndefined();
+
+  const managerLogin = await call(
+    "/login",
+    { email: created.email, password: "manager-password-86f92e" },
+    false,
+  );
+  expect(managerLogin.status).toBe(200);
+  const managerToken = managerLogin.headers
+    .get("set-cookie")!
+    .split(";")[0]!
+    .slice(policy.cookieName.length + 1);
+  expect((await call("/session", undefined, true, undefined, managerToken)).status).toBe(200);
+  expect((await call("/users", undefined, true, undefined, managerToken)).status).toBe(403);
+  expect((await call("/board", undefined, true, undefined, managerToken)).status).toBe(200);
+
+  const adminRoleChange = await call(`/users/${created.id}`, {
+    name: "Team Admin",
+    email: created.email,
+    role: "admin",
+    password: "updated-manager-password-45c7a2",
+  });
+  expect(adminRoleChange.status).toBe(200);
+  expect((await call("/session", undefined, true, undefined, managerToken)).status).toBe(401);
+  expect(
+    (await call("/login", { email: created.email, password: "manager-password-86f92e" }, false))
+      .status,
+  ).toBe(401);
+  const updatedLogin = await call(
+    "/login",
+    { email: created.email, password: "updated-manager-password-45c7a2" },
+    false,
+  );
+  expect(updatedLogin.status).toBe(200);
+  expect(await updatedLogin.json()).toMatchObject({ name: "Team Admin", role: "admin" });
 });
 
 it("uses an HttpOnly secure cookie and rejects cross-origin mutations", async () => {

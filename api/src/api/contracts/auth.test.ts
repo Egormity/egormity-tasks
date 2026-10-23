@@ -6,6 +6,7 @@ const user = {
   id: "11111111-1111-4111-8111-111111111111",
   name: "Administrator",
   email: "admin@example",
+  role: "admin",
 };
 
 it("uses the local administrator profile and accepts the configured non-public email identifier", () => {

@@ -1,5 +1,10 @@
 export const readWorkspaceLocation = () => {
-  const page = location.pathname === "/agent" ? "agent" : "tasks";
+  const page =
+    location.pathname === "/agent"
+      ? "agent"
+      : location.pathname === "/users"
+        ? "users"
+        : "tasks";
   const parameters = new URLSearchParams(location.search);
   const value = parameters.get("chat");
   const task = parameters.get("task");

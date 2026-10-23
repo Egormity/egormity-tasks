@@ -32,11 +32,16 @@ afterEach(() => {
   vi.unstubAllGlobals();
   localStorage.clear();
 });
-const mount = () =>
+const mount = (role: "admin" | "manager" = "admin") =>
   render(
     <PreferencesProvider>
       <WorkspaceNavigation
-        user={{ id: "admin", name: "Администратор", email: "admin@example" }}
+        user={{
+          id: "00000000-0000-5000-8000-000000000001",
+          name: "Администратор",
+          email: "admin@example",
+          role,
+        }}
         page="agent"
         agentHref={agentHref}
         onLogout={vi.fn()}
@@ -44,6 +49,16 @@ const mount = () =>
       <textarea aria-label="Черновик" defaultValue="Не потерять сообщение" />
     </PreferencesProvider>,
   );
+
+it("shows the users destination only for admins", () => {
+  mount("admin");
+  expect(screen.getByRole("link", { name: "Пользователи" }).getAttribute("href")).toBe(
+    "/users",
+  );
+  cleanup();
+  mount("manager");
+  expect(screen.queryByRole("link", { name: "Пользователи" })).toBeNull();
+});
 
 it("opens the localized menu, retains the chat link and draft, and restores focus after Escape", async () => {
   mount();
@@ -57,7 +72,7 @@ it("opens the localized menu, retains the chat link and draft, and restores focu
   );
   expect(within(menu).getByRole("combobox", { name: "Язык" })).toBeTruthy();
   expect(within(menu).getByRole("combobox", { name: "Тема" })).toBeTruthy();
-  expect(within(menu).getByText("Администратор")).toBeTruthy();
+  expect(within(menu).getAllByText("Администратор")).toHaveLength(2);
   expect(within(menu).getByRole("button", { name: "Выйти" })).toBeTruthy();
   fireEvent.keyDown(document.activeElement!, { key: "Escape" });
   await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());

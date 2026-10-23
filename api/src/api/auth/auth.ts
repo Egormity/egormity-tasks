@@ -1,44 +1,43 @@
-import { createHash, createHmac, randomUUID, scryptSync, timingSafeEqual } from "node:crypto";
+import { createHmac, randomUUID, timingSafeEqual } from "node:crypto";
 import type { InternalTasksEnvironment } from "../config.js";
 import { internalTasksPolicy as policy } from "../contracts/policy.js";
 import type { NextFunction, Request, Response } from "express";
 import { z } from "zod";
 import { loginRequestSchema, userSchema, type User } from "../contracts/auth.js";
+import { HttpError } from "../http-error.js";
+import { UserStore, verifyPassword, type UserCredentials } from "./user-store.js";
 
-const sessionSchema = userSchema.extend({ expiresAt: z.number().int(), nonce: z.uuid() });
+export { HttpError } from "../http-error.js";
 
-const makeUserId = (email: string) => {
-  const hex = createHash("sha256").update(email).digest("hex").slice(0, 32).split("");
-  hex[12] = "5";
-  hex[16] = ((parseInt(hex[16]!, 16) & 3) | 8).toString(16);
-  const value = hex.join("");
-  return `${value.slice(0, 8)}-${value.slice(8, 12)}-${value.slice(12, 16)}-${value.slice(16, 20)}-${value.slice(20)}`;
-};
+const sessionSchema = userSchema.extend({
+  expiresAt: z.number().int(),
+  nonce: z.uuid(),
+  sessionVersion: z.number().int().nonnegative().default(0),
+});
+
+const bootstrapAdminId = "00000000-0000-5000-8000-000000000001";
 
 export const localAdminUser = (
   config: Pick<InternalTasksEnvironment, "adminEmail" | "adminName">,
 ): User => ({
-  id: makeUserId(config.adminEmail),
+  id: bootstrapAdminId,
   name: config.adminName,
   email: config.adminEmail,
+  role: "admin",
 });
 
-export const createSessionToken = (user: User, secret: string, expiresAt: number) => {
+export const createSessionToken = (
+  user: User,
+  secret: string,
+  expiresAt: number,
+  sessionVersion = 0,
+) => {
   const payload = Buffer.from(
-    JSON.stringify({ ...user, expiresAt, nonce: randomUUID() }),
+    JSON.stringify({ ...user, expiresAt, nonce: randomUUID(), sessionVersion }),
   ).toString("base64url");
   const signature = createHmac("sha256", secret).update(payload).digest("base64url");
   return `${payload}.${signature}`;
 };
-
-export class HttpError extends Error {
-  constructor(
-    readonly status: number,
-    message: string,
-  ) {
-    super(message);
-  }
-}
 
 export const readToken = (request: Request) => {
   const cookie = request.headers.cookie
@@ -48,14 +47,21 @@ export const readToken = (request: Request) => {
   return cookie?.slice(policy.cookieName.length + 1);
 };
 
-export class AdminAuthentication {
+const publicUser = ({ id, name, email, role }: UserCredentials): User => ({
+  id,
+  name,
+  email,
+  role,
+});
+
+export class UserAuthentication {
   private readonly attempts = new Map<string, { count: number; reset: number }>();
   private readonly revoked = new Map<string, number>();
-  private readonly user: User;
 
-  constructor(private readonly config: InternalTasksEnvironment) {
-    this.user = localAdminUser(config);
-  }
+  constructor(
+    private readonly config: InternalTasksEnvironment,
+    private readonly users: UserStore,
+  ) {}
 
   private setCookie = (response: Response, token: string) =>
     response.cookie(policy.cookieName, token, {
@@ -83,14 +89,10 @@ export class AdminAuthentication {
       const decoded = sessionSchema.parse(
         JSON.parse(Buffer.from(payload, "base64url").toString()),
       );
-      if (
-        decoded.expiresAt <= Date.now() ||
-        decoded.id !== this.user.id ||
-        decoded.email !== this.user.email ||
-        decoded.name !== this.user.name
-      )
-        return null;
-      return this.user;
+      if (decoded.expiresAt <= Date.now()) return null;
+      const user = this.users.findById(decoded.id);
+      if (!user || user.sessionVersion !== decoded.sessionVersion) return null;
+      return publicUser(user);
     } catch {
       return null;
     }
@@ -99,14 +101,24 @@ export class AdminAuthentication {
   verify = (request: Request) => {
     const token = readToken(request);
     const user = token ? this.verifyToken(token) : null;
-    if (!user)
-      throw new HttpError(401, "Your local administrator session has expired. Sign in again.");
+    if (!user) throw new HttpError(401, "Your session has expired. Sign in again.");
     return user;
+  };
+
+  requireAuthenticated = async (request: Request, response: Response, next: NextFunction) => {
+    try {
+      response.locals.user = await this.verify(request);
+      next();
+    } catch (error) {
+      next(error);
+    }
   };
 
   requireAdmin = async (request: Request, response: Response, next: NextFunction) => {
     try {
-      response.locals.user = await this.verify(request);
+      const user = await this.verify(request);
+      if (user.role !== "admin") throw new HttpError(403, "Admin access is required.");
+      response.locals.user = user;
       next();
     } catch (error) {
       next(error);
@@ -128,25 +140,24 @@ export class AdminAuthentication {
     this.attempts.set(key, attempt);
     const input = loginRequestSchema.safeParse(request.body);
     if (!input.success) throw new HttpError(400, "Enter a valid email and password.");
-    const [saltValue, hashValue] = this.config.adminPasswordHash.split(".");
-    const salt = Buffer.from(saltValue!, "base64url");
-    const expected = Buffer.from(hashValue!, "base64url");
-    const actual = scryptSync(input.data.password, salt, expected.length);
-    if (
-      input.data.email.toLowerCase() !== this.user.email ||
-      !timingSafeEqual(actual, expected)
-    )
-      throw new HttpError(401, "Invalid email or password.");
+    const user = this.users.findByEmail(input.data.email);
+    const passwordMatches = verifyPassword(
+      input.data.password,
+      user?.passwordHash ?? this.config.adminPasswordHash,
+    );
+    if (!user || !passwordMatches) throw new HttpError(401, "Invalid email or password.");
     this.attempts.delete(key);
+    const identity = publicUser(user);
     this.setCookie(
       response,
       createSessionToken(
-        this.user,
+        identity,
         this.config.sessionSecret,
         now + policy.cookieMaxAgeMilliseconds,
+        user.sessionVersion,
       ),
     );
-    response.json(this.user);
+    response.json(identity);
   };
 
   logout = (request: Request, response: Response) => {

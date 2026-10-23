@@ -95,7 +95,13 @@ beforeEach(() => {
     "fetch",
     vi.fn((path: string, init?: RequestInit) => {
       if (init?.method === "POST") posts.push(path);
-      if (path === "/api/session") return json({ id: "admin", name: "Admin", email: null });
+      if (path === "/api/session")
+        return json({
+          id: "00000000-0000-5000-8000-000000000001",
+          name: "Admin",
+          email: "admin@example.test",
+          role: "admin",
+        });
       if (path === "/api/board") return json(board);
       if (path === `/api/board/cards/${card.id}/events`) return json([]);
       if (path === `/api/board/cards/${card.id}` && init?.method === "POST") {

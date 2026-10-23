@@ -8,7 +8,7 @@ import { AppLink } from "./AppLink";
 
 type NavigationProps = {
   user: User;
-  page: "tasks" | "agent";
+  page: "tasks" | "agent" | "users";
   agentHref: string;
   onLogout: () => void;
 };
@@ -22,6 +22,10 @@ const NavigationContent = ({
   closeControl,
 }: NavigationProps & { onNavigate?: () => void; closeControl?: ReactNode }) => {
   const { copy } = usePreferences();
+  const pages =
+    user.role === "admin"
+      ? (["tasks", "agent", "users"] as const)
+      : (["tasks", "agent"] as const);
   return (
     <>
       <div className="flex items-start justify-between gap-2">
@@ -32,10 +36,10 @@ const NavigationContent = ({
         {closeControl}
       </div>
       <nav aria-label={copy.navigation} className="mt-5 flex flex-col gap-2">
-        {(["tasks", "agent"] as const).map((item) => (
+        {pages.map((item) => (
           <AppLink
             key={item}
-            href={item === "agent" ? agentHref : "/tasks"}
+            href={item === "agent" ? agentHref : item === "users" ? "/users" : "/tasks"}
             aria-current={page === item ? "page" : undefined}
             onClick={onNavigate}
             className={`rounded-lg px-4 py-3 text-sm font-medium ${page === item ? "bg-selected text-accent" : "text-muted hover:bg-canvas"}`}
@@ -49,7 +53,9 @@ const NavigationContent = ({
         <div className="mt-5 flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm">{user.name}</p>
-            <p className="text-muted mt-1 text-xs">{copy.shared}</p>
+            <p className="text-muted mt-1 text-xs">
+              {user.role === "admin" ? copy.adminRole : copy.managerRole}
+            </p>
           </div>
           <button
             type="button"

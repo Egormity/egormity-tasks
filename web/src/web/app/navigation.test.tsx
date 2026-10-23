@@ -53,6 +53,20 @@ it("reads direct task/chat URLs and restores the same selection on Back/Forward"
   expect(location.hash).toBe("");
 });
 
+it("recognizes the users route and keeps it navigable with a real URL", () => {
+  history.replaceState(null, "", "/tasks");
+  render(<AppLink href="/users">Users</AppLink>);
+  fireEvent.click(screen.getByRole("link", { name: "Users" }));
+  expect(workspaceHref()).toBe("/users");
+  expect(readWorkspaceLocation()).toEqual({
+    page: "users",
+    chatId: null,
+    taskId: null,
+    chatScope: null,
+    draft: false,
+  });
+});
+
 it("converts legacy entries reached through browser history before notifying the UI", async () => {
   stopNavigation = initializeWorkspaceNavigation();
   history.pushState(null, "", `/#/agent?chat=${chatId}`);

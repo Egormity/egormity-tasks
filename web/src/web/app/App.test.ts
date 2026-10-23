@@ -17,6 +17,8 @@ let host: HTMLDivElement;
 
 let paths: string[];
 
+let sessionRole: "admin" | "manager";
+
 const settle = async (action: () => void) => {
   await act(async () => {
     action();
@@ -26,6 +28,7 @@ const settle = async (action: () => void) => {
 
 beforeEach(() => {
   paths = [];
+  sessionRole = "admin";
   localStorage.clear();
   history.replaceState(null, "", "/tasks");
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
@@ -40,8 +43,14 @@ beforeEach(() => {
       paths.push(path);
       let body: unknown = {};
       if (path === "/api/session")
-        body = { id: "admin", name: "Administrator", email: "admin@example.test" };
+        body = {
+          id: "admin",
+          name: "Administrator",
+          email: "admin@example.test",
+          role: sessionRole,
+        };
       if (path === "/api/board") body = { cards: [], tags: [] };
+      if (path === "/api/users") body = [];
       if (path.startsWith("/api/snapshot"))
         body = {
           chats: [],
@@ -142,4 +151,20 @@ it("keeps language and appearance settings out of the sign-in screen", async () 
   expect(host.querySelector('input[name="email"]')).not.toBeNull();
   expect(host.querySelector('input[name="password"]')).not.toBeNull();
   expect(host.querySelectorAll("select")).toHaveLength(0);
+});
+
+it("opens the direct users URL for admins and sends managers away from it", async () => {
+  history.replaceState(null, "", "/users");
+  await render();
+  expect(host.querySelector("h1")?.textContent).toBe("Users");
+  expect(host.querySelector('a[href="/users"]')?.getAttribute("aria-current")).toBe("page");
+
+  await settle(() => root.unmount());
+  root = createRoot(host);
+  sessionRole = "manager";
+  history.replaceState(null, "", "/users");
+  await render();
+  expect(location.pathname).toBe("/tasks");
+  expect(host.querySelector('a[href="/users"]')).toBeNull();
+  expect(host.querySelector("h1")?.textContent).not.toBe("Users");
 });

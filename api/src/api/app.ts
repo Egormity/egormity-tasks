@@ -1,7 +1,9 @@
 import { type InternalTasksEnvironment, internalTasksPolicy as policy } from "./config.js";
 import express, { type ErrorRequestHandler } from "express";
 
-import { AdminAuthentication, HttpError, readToken } from "./auth/auth.js";
+import { UserAuthentication, HttpError, localAdminUser, readToken } from "./auth/auth.js";
+import { UserStore } from "./auth/user-store.js";
+import { userRoutes } from "./auth/user-routes.js";
 import { boardRoutes } from "./board/board-routes.js";
 import { BoardEvents } from "./board/board-events.js";
 import { BoardStore } from "./board/board-store.js";
@@ -17,7 +19,8 @@ import { taskVerdictRoutes } from "./task-agent/task-verdict.js";
 
 export const createApplication = (config: InternalTasksEnvironment, store: BoardDatabase) => {
   const app = express();
-  const authentication = new AdminAuthentication(config);
+  const users = new UserStore(store.db, localAdminUser(config), config.adminPasswordHash);
+  const authentication = new UserAuthentication(config, users);
   const workConfirmations = new WorkConfirmations(config);
   const boardEvents = new BoardEvents();
   const board = new BoardStore(store.db);
@@ -62,8 +65,9 @@ export const createApplication = (config: InternalTasksEnvironment, store: Board
     },
     authentication.logout,
   );
-  api.use(authentication.requireAdmin);
+  api.use(authentication.requireAuthenticated);
   api.get("/session", (_request, response) => response.json(response.locals.user));
+  api.use("/users", authentication.requireAdmin, userRoutes(users));
   api.use("/board", boardRoutes(board, boardEvents, taskChats));
   if (config.workerConfigured) {
     api.use(taskAgentRoutes(config, board, taskChats, boardEvents));
