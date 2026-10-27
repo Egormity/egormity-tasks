@@ -321,18 +321,53 @@ it("creates, edits, orders and safely removes persisted columns and dividers", a
   expect(moved.status).toBe(200);
   expect((await call(`/board/columns/${created.id}/remove`, {})).status).toBe(200);
 
-  const divider = (await (await call("/board/dividers", {})).json()) as NonNullable<
-    BoardSnapshot["dividers"]
-  >[number];
+  const divider = (await (
+    await call("/board/dividers", { title: "First release", columnId: "backlog" })
+  ).json()) as NonNullable<BoardSnapshot["dividers"]>[number];
+  expect(divider).toMatchObject({ title: "First release", columnId: "backlog" });
   expect(((await (await call("/board")).json()) as BoardSnapshot).dividers).toContainEqual(
     divider,
   );
+
+  const secondCard = (await (
+    await call("/board/cards", {
+      title: "Task before section",
+      description: null,
+      status: "backlog",
+      priority: "medium",
+      tagIds: [],
+    })
+  ).json()) as Task;
+  const movedCard = (await (
+    await call(`/board/cards/${secondCard.id}`, {
+      revision: secondCard.revision,
+      beforeId: divider.id,
+    })
+  ).json()) as Task;
+  expect(movedCard.order).toBeGreaterThan(card.order);
+  expect(movedCard.order).toBeLessThan(
+    ((await (await call("/board")).json()) as BoardSnapshot).dividers!.find(
+      ({ id }) => id === divider.id,
+    )!.order,
+  );
+  const renamed = await call(`/board/dividers/${divider.id}`, { title: "Ready for release" });
+  expect(await renamed.json()).toMatchObject({ id: divider.id, title: "Ready for release" });
   expect(await (await call(`/board/dividers/${divider.id}/remove`, {})).json()).toEqual({
     id: divider.id,
   });
   const finalSnapshot = (await (await call("/board")).json()) as BoardSnapshot;
   expect(finalSnapshot.columns?.map(({ id }) => id)).toEqual(baseColumns.map(({ id }) => id));
   expect(finalSnapshot.dividers).toEqual([]);
+});
+
+it("reads legacy dividers and gives them a safe default title and placement", async () => {
+  store.db
+    .prepare("UPDATE board_settings SET data = ? WHERE key = 'dividers'")
+    .run(JSON.stringify([{ id: "legacy-divider" }]));
+  const snapshot = (await (await call("/board")).json()) as BoardSnapshot;
+  expect(snapshot.dividers).toEqual([
+    { id: "legacy-divider", title: "Раздел 1", columnId: "backlog", order: 0 },
+  ]);
 });
 
 it("stores authenticated binary attachments and serves them only as downloads", async () => {

@@ -14,6 +14,7 @@ import { getOrderedColumnTasks } from "./task-board-order";
 import { TaskCard } from "@/features/board/components/task-card";
 import { type Task, boardColumns } from "@/features/board/data/task-data";
 import type { useUpdateTrackerCard } from "@/features/board/data/tracker-hooks";
+import type { BoardDivider } from "@contracts/board-columns.js";
 import { useBoardDrag } from "./use-board-drag";
 
 const tasks: Task[] = ["a", "b", "c", "x", "y"].map((id, index) => ({
@@ -31,6 +32,8 @@ const tasks: Task[] = ["a", "b", "c", "x", "y"].map((id, index) => ({
   updatedAt: "2026-10-11T00:00:00.000Z",
 }));
 
+const noDividers: BoardDivider[] = [];
+
 let manager: DragDropManager;
 
 let scrollOffset: number;
@@ -45,8 +48,14 @@ const ManagerProbe = () => {
   return null;
 };
 
-const Harness = ({ items = tasks }: { readonly items?: Task[] }) => {
-  const drag = useBoardDrag(items, items, { mutate, isPending: false });
+const Harness = ({
+  items = tasks,
+  dividers = noDividers,
+}: {
+  readonly items?: Task[];
+  readonly dividers?: BoardDivider[];
+}) => {
+  const drag = useBoardDrag(items, items, dividers, { mutate, isPending: false });
   return (
     <DragDropProvider
       onBeforeDragStart={drag.handleBeforeDragStart}
@@ -65,6 +74,10 @@ const Harness = ({ items = tasks }: { readonly items?: Task[] }) => {
           key={column.id}
           column={column}
           tasks={getOrderedColumnTasks(drag.displayedTasks, column.id)}
+          dividers={drag.displayedDividers}
+          dividerBusy={false}
+          onEditDivider={() => {}}
+          onRemoveDivider={() => {}}
           dragDisabled={false}
           insertionBeforeId={
             drag.dropTarget?.status === column.id ? drag.dropTarget.beforeId : undefined
@@ -90,16 +103,30 @@ beforeEach(() => {
     const index = boardColumns.findIndex((item) => item.id === column?.dataset.boardColumnId);
     if (index < 0) return new DOMRect(0, 0, 2000, 900);
     const left = index * 320;
-    const card = element.closest<HTMLElement>("[data-task-card-id]");
-    if (!card) return new DOMRect(left, 0, 300, 800);
+    const row = element.closest<HTMLElement>("[data-board-order-item-id]");
+    if (!row) return new DOMRect(left, 0, 300, 800);
+    const rows = Array.from(
+      column!.querySelectorAll<HTMLElement>("[data-board-order-item-id]"),
+    );
+    const position = rows.indexOf(row);
+    const card = row.querySelector<HTMLElement>("[data-task-card-id]");
     const cards = Array.from(column!.querySelectorAll("[data-task-card-id]"));
-    const position = cards.indexOf(card);
-    const heights = [80, 200, 80];
+    const cardPosition = card ? cards.indexOf(card) : -1;
+    const cardHeights = [80, 200, 80];
+    const heights = rows.map((item) => {
+      const itemCard = item.querySelector<HTMLElement>("[data-task-card-id]");
+      return itemCard ? (cardHeights[cards.indexOf(itemCard)] ?? 80) : 32;
+    });
     const top =
       100 -
       scrollOffset +
       heights.slice(0, position).reduce((sum, height) => sum + height + 12, 0);
-    return new DOMRect(left + 12, top, 276, heights[position] ?? 80);
+    return new DOMRect(
+      left + 12,
+      top,
+      276,
+      cardPosition >= 0 ? (cardHeights[cardPosition] ?? 80) : 32,
+    );
   });
   Element.prototype.scrollIntoView = vi.fn();
   Element.prototype.setPointerCapture = vi.fn();
@@ -166,6 +193,13 @@ const columnIds = (status: string) =>
     ),
   ).map((card) => card.dataset.taskCardId);
 
+const columnItemIds = (status: string) =>
+  Array.from(
+    document.querySelectorAll<HTMLElement>(
+      `[data-board-column-id="${status}"] [data-board-order-item-id]`,
+    ),
+  ).map((item) => item.dataset.boardOrderItemId);
+
 const indicator = () => document.querySelector("[data-board-drop-indicator]");
 
 it("updates the insertion slot inside one tall card while hit areas stay stationary", async () => {
@@ -182,6 +216,31 @@ it("updates the insertion slot inside one tall card while hit areas stay station
     expect.any(Object),
   );
   expect(columnIds("queue")).toEqual(["b", "a", "c"]);
+});
+
+it("expands a drop slot and inserts a task immediately before a titled divider", async () => {
+  const interleavedTasks = tasks.map((task) =>
+    task.status === "queue"
+      ? { ...task, order: task.id === "a" ? 0 : task.id === "b" ? 2 : 3 }
+      : task,
+  );
+  const section: BoardDivider = {
+    id: "section",
+    title: "Release",
+    columnId: "queue",
+    order: 1,
+  };
+  render(<Harness items={interleavedTasks} dividers={[section]} />);
+  await start("c");
+  await move(820, 200);
+  expect(indicator()?.className).toContain("h-12");
+  expect(indicator()?.parentElement?.dataset.boardOrderItemId).toBe("section");
+  await stop();
+  expect(mutate.mock.calls[0]?.[0]).toMatchObject({
+    id: "c",
+    input: { revision: 1, status: "queue", beforeId: "section" },
+  });
+  expect(columnItemIds("queue")).toEqual(["a", "c", "section", "b"]);
 });
 
 it("places a card at the end of a short column, not the top half of the full-height container", async () => {
@@ -307,7 +366,7 @@ it("updates the slot after scrolling and rejects areas clipped by the board view
   await interact(() => {
     manager.collisionObserver.forceUpdate();
   });
-  expect(indicator()?.className).toContain("-bottom-1");
+  expect(indicator()?.className).toContain("h-12");
   await move(1420, 350);
   expect(indicator()).toBeNull();
   await stop();

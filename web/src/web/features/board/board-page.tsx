@@ -1,6 +1,5 @@
 import { DragDropProvider, DragOverlay } from "@dnd-kit/react";
 import { useQuery } from "@tanstack/react-query";
-import { Minus } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -13,6 +12,7 @@ import type {
   Task,
   TaskStatus,
 } from "@/features/board/data/task-data";
+import type { BoardDivider } from "@contracts/board-columns.js";
 import { boardColumns } from "@/features/board/data/task-data";
 import {
   type TaskExportItem,
@@ -51,6 +51,7 @@ export const BoardPage = ({ archived }: { archived: boolean }) => {
     useTaskEditor(exportingColumnId !== null, columns);
   const {
     displayedTasks,
+    displayedDividers,
     dropTarget,
     handleBeforeDragStart,
     handleDragStart,
@@ -58,7 +59,7 @@ export const BoardPage = ({ archived }: { archived: boolean }) => {
     handleDragMove,
     handleDragOver,
     handleDragEnd,
-  } = useBoardDrag(tasks, allCardsQuery.data?.items, updateCard, columns);
+  } = useBoardDrag(tasks, allCardsQuery.data?.items, dividers, updateCard, columns);
 
   const closeSettings = () => {
     setSettingsOpen(false);
@@ -105,10 +106,31 @@ export const BoardPage = ({ archived }: { archived: boolean }) => {
     );
   };
 
-  const handleAddDivider = () =>
+  const handleAddDivider = () => {
+    if (!editingColumn) return;
+    const title = boardText(
+      "Раздел {0}",
+      dividers.filter((divider) => divider.columnId === editingColumn.id).length + 1,
+    );
     configureBoard.mutate(
-      { type: "add-divider" },
-      { onError: () => toast.error(boardText("Не удалось добавить разделитель")) },
+      { type: "add-divider", title, columnId: editingColumn.id },
+      {
+        onError: () => toast.error(boardText("Не удалось добавить разделитель")),
+        onSuccess: () => toast.success(boardText("Раздел добавлен")),
+      },
+    );
+  };
+
+  const handleEditDivider = (divider: BoardDivider, title: string) =>
+    configureBoard.mutate(
+      { type: "update-divider", id: divider.id, title },
+      { onError: () => toast.error(boardText("Не удалось изменить название раздела")) },
+    );
+
+  const handleRemoveDivider = (divider: BoardDivider) =>
+    configureBoard.mutate(
+      { type: "delete-divider", id: divider.id },
+      { onError: () => toast.error(boardText("Не удалось удалить разделитель")) },
     );
 
   const handleExportAll = async (
@@ -236,31 +258,16 @@ export const BoardPage = ({ archived }: { archived: boolean }) => {
                       dragDisabled={!allCardsQuery.data || updateCard.isPending}
                       onOpen={openView}
                       tasks={columnTasks}
+                      dividers={displayedDividers}
+                      dividerBusy={configureBoard.isPending}
+                      onEditDivider={handleEditDivider}
+                      onRemoveDivider={handleRemoveDivider}
                     />
                   </div>
                 );
               })}
             </div>
           </DragDropProvider>
-          {dividers.map((divider) => (
-            <div className="relative flex h-8 items-center px-4" key={divider.id}>
-              <span aria-hidden="true" className="bg-board-divider h-px w-full" />
-              <button
-                aria-label={boardText("Удалить разделитель")}
-                className="bg-board-surface text-board-icon hover:bg-board-selected absolute left-1/2 grid size-6 -translate-x-1/2 place-items-center rounded-full"
-                disabled={configureBoard.isPending}
-                onClick={() =>
-                  configureBoard.mutate(
-                    { type: "delete-divider", id: divider.id },
-                    { onError: () => toast.error(boardText("Не удалось удалить разделитель")) },
-                  )
-                }
-                type="button"
-              >
-                <Minus aria-hidden="true" className="size-3.5" />
-              </button>
-            </div>
-          ))}
         </div>
       )}
 

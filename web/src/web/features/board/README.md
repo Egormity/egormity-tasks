@@ -44,14 +44,17 @@ Task history is cached by task ID and revision and reread when that revision cha
 Comments in `comments/TaskComments.tsx` also use task ID/revision and retain their input across live
 updates. The task view shows comments with preview/download attachments; multipart writes commit
 text and files together and retain the draft after failure. Exports include comments and their files.
-`BoardStore` persists the ordered, editable column list and board-wide dividers in SQLite's
+`BoardStore` persists the ordered, editable column list and titled, per-column dividers in SQLite's
 `board_settings` JSON rows. It seeds the default array only when no saved setting exists, so changes
 survive API restarts without a versioned database migration. The API-owned defaults and validation
 schema live in `api/src/api/contracts/board-columns.ts`; Web mirrors the contract. Task statuses
 remain strings and are validated against the current saved columns. Column IDs stay stable; a column
 with assigned (including archived) tasks cannot be deleted until those tasks are moved. The Web
 column settings dialog creates, renames, recolors, reorders and removes empty columns, and keeps the
-column export action there. Dividers append across the board and can be removed individually.
+column export action there. Each divider stores its title, column and order alongside task order, so
+columns render one mixed sequence of task cards and section dividers. Legacy ID-only dividers are
+read with a default title and column. Dividers can be renamed or removed in place, and drag targets
+can insert cards before or after them; the insertion slot expands while a card is held there.
 Column and tag colors accept custom hex values through the color picker; legacy named tag colors
 remain supported for existing records. Attachment cards use a compact horizontal preview and action
 layout.

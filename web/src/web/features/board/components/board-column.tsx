@@ -3,8 +3,11 @@ import { Settings2 } from "lucide-react";
 
 import { DraggableTaskCard } from "./task-card";
 import type { BoardColumn as BoardColumnType, Task } from "@/features/board/data/task-data";
+import type { BoardDivider } from "@contracts/board-columns.js";
 
 import { boardText } from "@/features/board/i18n/board-copy";
+import { getOrderedColumnItems } from "@/features/board/dnd/task-board-order";
+import { BoardDividerItem } from "./board-divider-item";
 
 type BoardColumnProps = {
   readonly column: BoardColumnType;
@@ -12,6 +15,10 @@ type BoardColumnProps = {
   readonly onConfigure: () => void;
   readonly onOpen: (task: Task) => void;
   readonly tasks: readonly Task[];
+  readonly dividers: readonly BoardDivider[];
+  readonly dividerBusy: boolean;
+  readonly onEditDivider: (divider: BoardDivider, title: string) => void;
+  readonly onRemoveDivider: (divider: BoardDivider) => void;
   readonly insertionBeforeId?: string | null | undefined;
 };
 
@@ -21,8 +28,13 @@ export const BoardColumn = ({
   onConfigure,
   onOpen,
   tasks,
+  dividers,
+  dividerBusy,
+  onEditDivider,
+  onRemoveDivider,
   insertionBeforeId,
 }: BoardColumnProps) => {
+  const items = getOrderedColumnItems(tasks, dividers, column.id);
   const { ref } = useDroppable({
     data: { columnId: column.id },
     accept: "task",
@@ -69,20 +81,29 @@ export const BoardColumn = ({
       </header>
 
       <div className="relative flex flex-1 flex-col gap-1.5 p-1.5">
-        {tasks.length > 0 ? (
-          tasks.map((task, index) => (
-            <div className="relative" key={task.id}>
-              {insertionBeforeId === task.id && <DropIndicator />}
-              <DraggableTaskCard dragDisabled={dragDisabled} onOpen={onOpen} task={task} />
-              {insertionBeforeId === null && index === tasks.length - 1 && (
-                <DropIndicator after />
-              )}
-            </div>
-          ))
-        ) : (
+        {items.length === 0 && (
           <div className="text-board-subtle relative grid min-h-16 place-items-center px-2 py-4 text-center text-[14px]">
-            {insertionBeforeId === null && <DropIndicator />}
             {boardText("Нет подходящих задач")}
+          </div>
+        )}
+        {items.map((item) => (
+          <div className="relative" data-board-order-item-id={item.id} key={item.id}>
+            {insertionBeforeId === item.id && <DropSlot />}
+            {item.kind === "task" ? (
+              <DraggableTaskCard dragDisabled={dragDisabled} onOpen={onOpen} task={item.task} />
+            ) : (
+              <BoardDividerItem
+                busy={dividerBusy}
+                divider={item.divider}
+                onRemove={() => onRemoveDivider(item.divider)}
+                onSave={(title) => onEditDivider(item.divider, title)}
+              />
+            )}
+          </div>
+        ))}
+        {insertionBeforeId === null && (
+          <div className="relative">
+            <DropSlot />
           </div>
         )}
       </div>
@@ -90,10 +111,12 @@ export const BoardColumn = ({
   );
 };
 
-const DropIndicator = ({ after = false }: { readonly after?: boolean }) => (
-  <span
+const DropSlot = () => (
+  <div
     aria-hidden="true"
     data-board-drop-indicator=""
-    className={`bg-board-drag pointer-events-none absolute inset-x-0 z-10 h-0.5 ${after ? "-bottom-1" : "-top-1"}`}
-  />
+    className="border-board-drag bg-board-drop-surface pointer-events-none mb-1 grid h-12 place-items-center rounded border border-dashed transition-[height,margin]"
+  >
+    <span className="bg-board-drag h-0.5 w-4/5 rounded-full" />
+  </div>
 );

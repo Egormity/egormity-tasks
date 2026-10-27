@@ -8,16 +8,18 @@ import {
   type BoardDropTarget,
   getFullColumnDropTarget,
   getKeyboardDropTarget,
-  getOrderedColumnTasks,
+  getOrderedColumnItems,
   moveBoardTask,
 } from "./task-board-order";
 import { type BoardColumn, type Task, boardColumns } from "@/features/board/data/task-data";
 import type { useUpdateTrackerCard } from "@/features/board/data/tracker-hooks";
+import type { BoardDivider } from "@contracts/board-columns.js";
 
 type DragSession = {
   readonly source: Task;
   readonly tasks: readonly Task[];
   readonly allTasks: readonly Task[];
+  readonly dividers: readonly BoardDivider[];
   readonly keyboard: boolean;
   target: BoardDropTarget | null;
   saving: boolean;
@@ -26,15 +28,20 @@ type DragSession = {
 export const useBoardDrag = (
   tasks: readonly Task[],
   allTasks: readonly Task[] | undefined,
+  dividers: readonly BoardDivider[],
   updateCard: Pick<ReturnType<typeof useUpdateTrackerCard>, "mutate" | "isPending">,
   columns: readonly BoardColumn[] = boardColumns,
 ) => {
   const session = useRef<DragSession | null>(null);
   const [displayedTasks, setDisplayedTasks] = useState<readonly Task[] | null>(null);
+  const [displayedDividers, setDisplayedDividers] = useState<readonly BoardDivider[] | null>(
+    null,
+  );
   const [dropTarget, setDropTarget] = useState<BoardDropTarget | null>(null);
   const clear = () => {
     session.current = null;
     setDisplayedTasks(null);
+    setDisplayedDividers(null);
     setDropTarget(null);
   };
   const updateTarget = (target: BoardDropTarget | null) => {
@@ -52,7 +59,14 @@ export const useBoardDrag = (
     const drag = session.current;
     if (drag && !drag.keyboard && !drag.saving)
       updateTarget(
-        getPointerDropTarget(manager, drag.tasks, drag.source.id, undefined, columns),
+        getPointerDropTarget(
+          manager,
+          drag.tasks,
+          drag.dividers,
+          drag.source.id,
+          undefined,
+          columns,
+        ),
       );
   };
   const handleBeforeDragStart: DragDropEventHandlers["onBeforeDragStart"] = (event) => {
@@ -61,21 +75,23 @@ export const useBoardDrag = (
   const handleDragStart: DragDropEventHandlers["onDragStart"] = (event, manager) => {
     const source = tasks.find((task) => task.id === event.operation.source?.id);
     if (!source || source.status === "archived" || !allTasks) return;
-    const column = getOrderedColumnTasks(tasks, source.status);
+    const column = getOrderedColumnItems(tasks, dividers, source.status);
     const target = {
       status: source.status,
-      beforeId: column[column.findIndex((task) => task.id === source.id) + 1]?.id ?? null,
+      beforeId: column[column.findIndex((item) => item.id === source.id) + 1]?.id ?? null,
     };
     session.current = {
       source,
       tasks,
       allTasks,
+      dividers,
       target,
       keyboard: event.operation.activatorEvent?.type === "keydown",
       saving: false,
     };
     // Keep hit areas stationary until release; polling cannot shift them under the pointer.
     setDisplayedTasks(tasks);
+    setDisplayedDividers(dividers);
     setDropTarget(target);
     updatePointer(manager);
   };
@@ -91,6 +107,7 @@ export const useBoardDrag = (
     event.preventDefault();
     const target = getKeyboardDropTarget(
       drag.tasks,
+      drag.dividers,
       drag.source.id,
       drag.target,
       event.by,
@@ -114,25 +131,47 @@ export const useBoardDrag = (
         : undefined;
     const target = drag.keyboard
       ? drag.target
-      : getPointerDropTarget(manager, drag.tasks, drag.source.id, point, columns);
+      : getPointerDropTarget(
+          manager,
+          drag.tasks,
+          drag.dividers,
+          drag.source.id,
+          point,
+          columns,
+        );
     if (event.canceled || !target) {
       clear();
       return;
     }
-    const next = moveBoardTask(drag.tasks, drag.source.id, target, columns);
-    if (next === drag.tasks) {
+    const fullTarget = getFullColumnDropTarget(
+      drag.tasks,
+      drag.allTasks,
+      drag.source.id,
+      target,
+      drag.dividers,
+    );
+    const next = moveBoardTask(
+      drag.allTasks,
+      drag.dividers,
+      drag.source.id,
+      fullTarget,
+      columns,
+    );
+    if (next.tasks === drag.allTasks && next.dividers === drag.dividers) {
       clear();
       return;
     }
     drag.saving = true;
     setDropTarget(null);
-    setDisplayedTasks(next);
+    const visibleIds = new Set(drag.tasks.map((task) => task.id));
+    setDisplayedTasks(next.tasks.filter((task) => visibleIds.has(task.id)));
+    setDisplayedDividers(next.dividers);
     updateCard.mutate(
       {
         id: drag.source.id,
         input: {
           revision: drag.source.revision,
-          ...getFullColumnDropTarget(drag.tasks, drag.allTasks, drag.source.id, target),
+          ...fullTarget,
         },
       },
       {
@@ -151,6 +190,7 @@ export const useBoardDrag = (
   };
   return {
     displayedTasks: displayedTasks ?? tasks,
+    displayedDividers: displayedDividers ?? dividers,
     dropTarget,
     handleBeforeDragStart,
     handleDragStart,

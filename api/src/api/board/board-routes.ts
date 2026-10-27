@@ -9,7 +9,7 @@ import {
   taskInputSchema,
   taskUpdateSchema,
 } from "../contracts/board.js";
-import { boardColumnSchema } from "../contracts/board-columns.js";
+import { boardColumnSchema, boardDividerInputSchema } from "../contracts/board-columns.js";
 
 import { HttpError } from "../auth/auth.js";
 import type { BoardStore } from "./board-store.js";
@@ -58,9 +58,18 @@ export const boardRoutes = (store: BoardStore, events: BoardEvents) => {
   router.post("/columns/:id/remove", (request, response) =>
     response.json(changed(store.deleteColumn(request.params.id))),
   );
-  router.post("/dividers", (_request, response) =>
-    response.status(201).json(changed(store.addDivider())),
+  router.post("/dividers", (request, response) =>
+    response
+      .status(201)
+      .json(changed(store.addDivider(parse(boardDividerInputSchema, request.body)))),
   );
+  router.post("/dividers/:id", (request, response) => {
+    const { title } = parse(
+      boardDividerInputSchema.pick({ title: true }).strict(),
+      request.body,
+    );
+    response.json(changed(store.updateDivider(request.params.id, title)));
+  });
   router.post("/dividers/:id/remove", (request, response) =>
     response.json(changed(store.deleteDivider(request.params.id))),
   );

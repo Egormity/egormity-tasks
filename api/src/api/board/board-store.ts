@@ -14,11 +14,26 @@ import type {
 import {
   boardColumns as defaultBoardColumns,
   boardColumnsSchema,
+  boardDividerSchema,
 } from "../contracts/board-columns.js";
+import { z } from "zod";
 
 import { HttpError } from "../auth/auth.js";
 import { CommentStore } from "./comments/comment-store.js";
 import { taskSchema } from "../contracts/board.js";
+
+const storedBoardDividerSchema = z
+  .object({
+    id: z.string().min(1).max(160),
+    title: z.string().trim().min(1).max(120).optional(),
+    columnId: z.string().min(1).max(160).optional(),
+    order: z.number().int().nonnegative().optional(),
+  })
+  .strict();
+
+type OrderedBoardItem =
+  | { readonly kind: "card"; readonly id: string; readonly card: Task }
+  | { readonly kind: "divider"; readonly id: string; readonly divider: BoardDivider };
 
 export class BoardStore {
   readonly comments: CommentStore;
@@ -57,7 +72,66 @@ export class BoardStore {
 
   columns = () => boardColumnsSchema.parse(this.readSetting("columns", defaultBoardColumns));
 
-  dividers = (): BoardDivider[] => this.readSetting("dividers", []);
+  dividers = (): BoardDivider[] => {
+    const stored = z
+      .array(storedBoardDividerSchema)
+      .parse(this.readSetting<unknown>("dividers", []));
+    const legacyColumnId = this.columns()[0]!.id;
+    const existingTasks = this.cards().filter(
+      (card) => card.status === legacyColumnId && !card.archivedAt,
+    );
+    const legacyOrder = Math.max(-1, ...existingTasks.map(({ order }) => order)) + 1;
+    let legacyIndex = 0;
+    return stored.map((item, index) => {
+      const order = item.order ?? legacyOrder + legacyIndex++;
+      return boardDividerSchema.parse({
+        id: item.id,
+        title: item.title ?? `Раздел ${index + 1}`,
+        columnId: item.columnId ?? legacyColumnId,
+        order,
+      });
+    });
+  };
+
+  private columnItems = (columnId: string, excludingCardId?: string): OrderedBoardItem[] => {
+    const items: OrderedBoardItem[] = [
+      ...this.cards()
+        .filter(
+          (card) => card.status === columnId && !card.archivedAt && card.id !== excludingCardId,
+        )
+        .map((card) => ({ kind: "card" as const, id: card.id, card })),
+      ...this.dividers()
+        .filter((divider) => divider.columnId === columnId)
+        .map((divider) => ({ kind: "divider" as const, id: divider.id, divider })),
+    ];
+    return items.sort((first, second) => {
+      const orderDifference =
+        (first.kind === "card" ? first.card.order : first.divider.order) -
+        (second.kind === "card" ? second.card.order : second.divider.order);
+      return orderDifference || first.id.localeCompare(second.id);
+    });
+  };
+
+  private writeColumnOrder = (items: readonly OrderedBoardItem[], primaryCardId?: string) => {
+    const dividers = this.dividers();
+    let dividerChanged = false;
+    items.forEach((item, order) => {
+      if (item.kind === "card") {
+        if (item.id === primaryCardId) {
+          this.save({ ...item.card, order });
+        } else if (item.card.order !== order) {
+          this.save({ ...item.card, order, revision: item.card.revision + 1 });
+        }
+        return;
+      }
+      const index = dividers.findIndex((divider) => divider.id === item.id);
+      if (index >= 0 && dividers[index]!.order !== order) {
+        dividers[index] = { ...dividers[index]!, order };
+        dividerChanged = true;
+      }
+    });
+    if (dividerChanged) this.writeSetting("dividers", dividers);
+  };
 
   createColumn = (input: { label: string; accent: string }) => {
     const columns = this.columns();
@@ -101,6 +175,8 @@ export class BoardStore {
       throw new HttpError(409, "The last board column cannot be deleted.");
     if (this.cards().some((card) => card.status === id))
       throw new HttpError(409, "Move or archive the column's tasks before deleting it.");
+    if (this.dividers().some((divider) => divider.columnId === id))
+      throw new HttpError(409, "Remove the column's dividers before deleting it.");
     this.writeSetting(
       "columns",
       columns.filter((column) => column.id !== id),
@@ -108,12 +184,36 @@ export class BoardStore {
     return { id };
   };
 
-  addDivider = () => {
-    const divider: BoardDivider = { id: randomUUID() };
+  addDivider = (input: { title: string; columnId: string }) => {
+    if (!this.columns().some(({ id }) => id === input.columnId))
+      throw new HttpError(400, "Choose a current board column.");
+    const items = this.columnItems(input.columnId);
+    const divider: BoardDivider = {
+      id: randomUUID(),
+      title: input.title,
+      columnId: input.columnId,
+      order: items.length
+        ? Math.max(
+            ...items.map((item) =>
+              item.kind === "card" ? item.card.order : item.divider.order,
+            ),
+          ) + 1
+        : 0,
+    };
     const dividers = this.dividers();
     dividers.push(divider);
     this.writeSetting("dividers", dividers);
     return divider;
+  };
+
+  updateDivider = (id: string, title: string) => {
+    const dividers = this.dividers();
+    const index = dividers.findIndex((divider) => divider.id === id);
+    if (index < 0) throw new HttpError(404, "Divider not found.");
+    const updated = { ...dividers[index]!, title };
+    dividers[index] = updated;
+    this.writeSetting("dividers", dividers);
+    return updated;
   };
 
   deleteDivider = (id: string) => {
@@ -211,13 +311,6 @@ export class BoardStore {
         throw new HttpError(400, "Choose a current board column.");
       this.validateTags(input.tagIds);
       const now = new Date().toISOString();
-      const column = this.cards().filter(
-        (card) => card.status === input.status && !card.archivedAt,
-      );
-      column.forEach((card, index) => {
-        const order = index + 1;
-        if (card.order !== order) this.save({ ...card, order, revision: card.revision + 1 });
-      });
       const card: Task = {
         ...input,
         id: randomUUID(),
@@ -228,7 +321,10 @@ export class BoardStore {
         attachments: [],
         revision: 1,
       };
-      this.save(card);
+      this.writeColumnOrder(
+        [{ kind: "card", id: card.id, card }, ...this.columnItems(input.status)],
+        card.id,
+      );
       this.event(card.id, "created", { actor });
       return card;
     });
@@ -270,19 +366,19 @@ export class BoardStore {
               : null,
       };
       if (beforeId !== undefined || card.status !== current.status || archived === false) {
-        const column = this.cards().filter(
-          (c) => c.id !== id && !c.archivedAt && c.status === card.status,
-        );
-        const position = beforeId ? column.findIndex((c) => c.id === beforeId) : column.length;
+        const column = this.columnItems(card.status, id);
+        const position = beforeId
+          ? column.findIndex((item) => item.id === beforeId)
+          : column.length;
         if (position < 0) throw new HttpError(409, "The board changed. Refresh and try again.");
-        column.splice(position, 0, card);
-        column.forEach((item, order) => {
-          if (item.id === id) card.order = order;
-          else if (item.order !== order)
-            this.save({ ...item, order, revision: item.revision + 1 });
-        });
+        column.splice(position, 0, { kind: "card", id: card.id, card });
+        if (current.status !== card.status && !current.archivedAt)
+          this.writeColumnOrder(this.columnItems(current.status, id));
+        card.order = position;
+        this.writeColumnOrder(column, id);
+      } else {
+        this.save(card);
       }
-      this.save(card);
       const changes = Object.entries(card)
         .filter(
           ([field, value]) =>

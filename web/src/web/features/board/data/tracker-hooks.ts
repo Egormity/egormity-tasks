@@ -19,6 +19,7 @@ import {
   reorderTrackerColumns,
   updateTrackerCard,
   updateTrackerColumn,
+  updateTrackerDivider,
   updateTrackerTag,
   uploadTrackerCardAttachment,
 } from "./tracker-api";
@@ -58,7 +59,8 @@ export type BoardConfigurationAction =
     }
   | { readonly type: "reorder-columns"; readonly ids: readonly string[] }
   | { readonly type: "delete-column"; readonly id: string }
-  | { readonly type: "add-divider" }
+  | { readonly type: "add-divider"; readonly title: string; readonly columnId: string }
+  | { readonly type: "update-divider"; readonly id: string; readonly title: string }
   | { readonly type: "delete-divider"; readonly id: string };
 
 export const useBoardConfiguration = () => {
@@ -69,7 +71,10 @@ export const useBoardConfiguration = () => {
       if (action.type === "update-column") return updateTrackerColumn(action.id, action.input);
       if (action.type === "reorder-columns") return reorderTrackerColumns(action.ids);
       if (action.type === "delete-column") return deleteTrackerColumn(action.id);
-      if (action.type === "add-divider") return createTrackerDivider();
+      if (action.type === "add-divider")
+        return createTrackerDivider({ title: action.title, columnId: action.columnId });
+      if (action.type === "update-divider")
+        return updateTrackerDivider(action.id, action.title);
       return deleteTrackerDivider(action.id);
     },
     onSuccess: () => invalidateTracker(queryClient),

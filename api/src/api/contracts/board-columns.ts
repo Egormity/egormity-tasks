@@ -28,7 +28,21 @@ export const boardColumnsSchema = z
   .max(20)
   .refine((columns) => new Set(columns.map(({ id }) => id)).size === columns.length);
 
-export const boardDividerSchema = z.object({ id: z.string().min(1).max(160) }).strict();
+export const boardDividerSchema = z
+  .object({
+    id: z.string().min(1).max(160),
+    title: z.string().trim().min(1).max(120),
+    columnId: z.string().min(1).max(160),
+    order: z.number().int().nonnegative(),
+  })
+  .strict();
+
+export const boardDividerInputSchema = z
+  .object({
+    title: z.string().trim().min(1).max(120),
+    columnId: z.string().min(1).max(160),
+  })
+  .strict();
 
 export type BoardColumn = z.infer<typeof boardColumnSchema>;
 export type TaskStatus = string;

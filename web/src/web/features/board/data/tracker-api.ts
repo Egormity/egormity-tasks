@@ -96,7 +96,11 @@ export const reorderTrackerColumns = (ids: readonly string[]) =>
 export const deleteTrackerColumn = (id: string) =>
   request<{ id: string }>(`/board/columns/${encodeURIComponent(id)}/remove`, {});
 
-export const createTrackerDivider = () => request<BoardDivider>("/board/dividers", {});
+export const createTrackerDivider = (input: { title: string; columnId: string }) =>
+  request<BoardDivider>("/board/dividers", input);
+
+export const updateTrackerDivider = (id: string, title: string) =>
+  request<BoardDivider>(`/board/dividers/${encodeURIComponent(id)}`, { title });
 
 export const deleteTrackerDivider = (id: string) =>
   request<{ id: string }>(`/board/dividers/${encodeURIComponent(id)}/remove`, {});

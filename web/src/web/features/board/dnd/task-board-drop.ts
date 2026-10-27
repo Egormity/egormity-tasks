@@ -1,7 +1,8 @@
 import type { DragDropManager } from "@dnd-kit/react";
 
-import { type BoardDropTarget, getOrderedColumnTasks } from "./task-board-order";
+import { type BoardDropTarget, getOrderedColumnItems } from "./task-board-order";
 import { type BoardColumn, type Task, boardColumns } from "@/features/board/data/task-data";
+import type { BoardDivider } from "@contracts/board-columns.js";
 
 type Point = { readonly x: number; readonly y: number };
 
@@ -30,6 +31,7 @@ const containsVisiblePoint = (element: Element, point: Point) => {
 export const getPointerDropTarget = (
   manager: DragDropManager,
   tasks: readonly Task[],
+  dividers: readonly BoardDivider[],
   taskId: string,
   point: Point = manager.dragOperation.position.current,
   columns: readonly BoardColumn[] = boardColumns,
@@ -38,14 +40,13 @@ export const getPointerDropTarget = (
     const element = manager.registry.droppables.get(status)?.element;
     if (!element || !containsVisiblePoint(element, point)) continue;
     const elements = new Map(
-      Array.from(element.querySelectorAll<HTMLElement>("[data-task-card-id]")).map((card) => [
-        card.dataset.taskCardId,
-        card,
-      ]),
+      Array.from(element.querySelectorAll<HTMLElement>("[data-board-order-item-id]")).map(
+        (item) => [item.dataset.boardOrderItemId, item],
+      ),
     );
-    const before = getOrderedColumnTasks(tasks, status).find((task) => {
-      if (task.id === taskId) return false;
-      const rect = elements.get(task.id)?.getBoundingClientRect();
+    const before = getOrderedColumnItems(tasks, dividers, status).find((item) => {
+      if (item.id === taskId) return false;
+      const rect = elements.get(item.id)?.getBoundingClientRect();
       return rect && point.y < rect.top + rect.height / 2;
     });
     return { status, beforeId: before?.id ?? null };
@@ -56,9 +57,9 @@ export const getPointerDropTarget = (
 export const moveKeyboardOverlay = (manager: DragDropManager, target: BoardDropTarget) => {
   const column = manager.registry.droppables.get(target.status)?.element;
   if (!column) return;
-  const cards = Array.from(column.querySelectorAll<HTMLElement>("[data-task-card-id]"));
+  const cards = Array.from(column.querySelectorAll<HTMLElement>("[data-board-order-item-id]"));
   const anchor =
-    cards.find((card) => card.dataset.taskCardId === target.beforeId) ?? cards.at(-1);
+    cards.find((card) => card.dataset.boardOrderItemId === target.beforeId) ?? cards.at(-1);
   (anchor ?? column).scrollIntoView({ block: "nearest", inline: "nearest" });
   const rect = (anchor ?? column).getBoundingClientRect();
   manager.actions.move({
