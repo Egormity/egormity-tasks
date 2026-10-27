@@ -12,6 +12,13 @@ Mutations require the configured browser origin. Authenticated reads and writes 
 checks; account management also requires an administrator role. Committed board writes publish SSE
 invalidations. SQLite stores workspace accounts and board data, including attachment bytes.
 
+The public account contract uses `username`, `role`, and write-only `password` input; the stable
+internal record ID remains for session and route references. Passwords are always hashed and never
+returned in account or session responses. On upgrade, `app_users.username` is added and backfilled
+from each existing login email, preserving current sign-in identifiers; users may subsequently
+change them to simple usernames. Existing sessions are invalidated when their old name/email claims
+no longer match the new session contract.
+
 Keep the contract copy under `web/src/api/contracts` synchronized when editing transport schemas.
 `contracts/board-columns.ts` owns the default column list and validation schema; the live ordered
 columns and board-wide dividers are persisted as JSON in SQLite's `board_settings` table. This is

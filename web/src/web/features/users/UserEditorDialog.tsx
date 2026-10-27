@@ -20,40 +20,27 @@ export const UserEditorDialog = ({
   onSave: (input: UserInput & { password: string }) => void;
 }) => {
   const { copy } = usePreferences();
-  const [name, setName] = useState(user?.name ?? "");
-  const [email, setEmail] = useState(user?.email ?? "");
+  const [username, setUsername] = useState(user?.username ?? "");
   const [role, setRole] = useState<User["role"]>(user?.role ?? "manager");
   const [password, setPassword] = useState("");
 
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    onSave({ name, email, role, password });
+    onSave({ username, role, password });
   };
 
   return (
     <AppDialog open onClose={onClose} title={user ? copy.editUser : copy.addUser} wide={false}>
       <form className="grid gap-3" onSubmit={submit}>
         <label className="grid gap-1 text-xs">
-          <span>{copy.name}</span>
+          <span>{copy.username}</span>
           <input
-            autoComplete="name"
+            autoComplete="username"
             className="border-line bg-canvas text-ink focus-visible:border-accent focus-visible:ring-accent rounded-lg border px-2.5 py-1.5 outline-none focus-visible:ring-1"
             maxLength={120}
-            onChange={(event) => setName(event.target.value)}
+            onChange={(event) => setUsername(event.target.value)}
             required
-            value={name}
-          />
-        </label>
-        <label className="grid gap-1 text-xs">
-          <span>{copy.email}</span>
-          <input
-            autoComplete="email"
-            className="border-line bg-canvas text-ink focus-visible:border-accent focus-visible:ring-accent rounded-lg border px-2.5 py-1.5 outline-none focus-visible:ring-1"
-            maxLength={254}
-            onChange={(event) => setEmail(event.target.value)}
-            required
-            type="email"
-            value={email}
+            value={username}
           />
         </label>
         <Select

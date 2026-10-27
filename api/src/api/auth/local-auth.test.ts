@@ -36,10 +36,10 @@ it("runs local admin and board routes, and revokes logout", async () => {
       Origin: "https://tasks.example.test",
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ email: "admin@example", password: testAdminPassword }),
+    body: JSON.stringify({ username: "admin@example", password: testAdminPassword }),
   });
   expect(login.status).toBe(200);
-  expect(await login.json()).toMatchObject({ email: "admin@example", name: "Admin" });
+  expect(await login.json()).toMatchObject({ username: "admin@example", role: "admin" });
   const cookie = login.headers.get("set-cookie")?.split(";")[0];
   expect(cookie).toContain(`${internalTasksPolicy.cookieName}=`);
   expect(login.headers.get("set-cookie")).toContain("HttpOnly");

@@ -21,8 +21,7 @@ export const localAdminUser = (
   config: Pick<InternalTasksEnvironment, "adminEmail" | "adminName">,
 ): User => ({
   id: bootstrapAdminId,
-  name: config.adminName,
-  email: config.adminEmail,
+  username: config.adminEmail,
   role: "admin",
 });
 
@@ -47,10 +46,9 @@ export const readToken = (request: Request) => {
   return cookie?.slice(policy.cookieName.length + 1);
 };
 
-const publicUser = ({ id, name, email, role }: UserCredentials): User => ({
+const publicUser = ({ id, username, role }: UserCredentials): User => ({
   id,
-  name,
-  email,
+  username,
   role,
 });
 
@@ -139,13 +137,13 @@ export class UserAuthentication {
     attempt.count += 1;
     this.attempts.set(key, attempt);
     const input = loginRequestSchema.safeParse(request.body);
-    if (!input.success) throw new HttpError(400, "Enter a valid email and password.");
-    const user = this.users.findByEmail(input.data.email);
+    if (!input.success) throw new HttpError(400, "Enter a username and password.");
+    const user = this.users.findByUsername(input.data.username);
     const passwordMatches = verifyPassword(
       input.data.password,
       user?.passwordHash ?? this.config.adminPasswordHash,
     );
-    if (!user || !passwordMatches) throw new HttpError(401, "Invalid email or password.");
+    if (!user || !passwordMatches) throw new HttpError(401, "Invalid username or password.");
     this.attempts.delete(key);
     const identity = publicUser(user);
     this.setCookie(

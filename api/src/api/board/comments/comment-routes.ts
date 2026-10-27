@@ -61,9 +61,9 @@ export const commentRoutes = (board: BoardStore, events: BoardEvents) => {
           return { attachment: attachment.data, bytes };
         }),
       );
-      const user = res.locals.user as { id: string; name: string };
+      const user = res.locals.user as { id: string; username: string };
       const comment = board.comments.add(
-        { ...input.data, cardId: req.params.id, author: { id: user.id, name: user.name } },
+        { ...input.data, cardId: req.params.id, author: { id: user.id, name: user.username } },
         uploads,
       );
       events.changed();

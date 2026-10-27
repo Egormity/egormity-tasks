@@ -202,7 +202,7 @@ export const BoardPage = ({ archived }: { archived: boolean }) => {
       )}
       {!archived && !cardsQuery.isLoading && !cardsQuery.isError && (
         <div
-          className="min-w-[1320px]"
+          className="mx-auto w-max min-w-full"
           style={{ minWidth: Math.max(1320, columns.length * 220) }}
         >
           <DragDropProvider
@@ -220,7 +220,7 @@ export const BoardPage = ({ archived }: { archived: boolean }) => {
                 return task && <TaskCard isOverlay task={task} />;
               }}
             </DragOverlay>
-            <div className="flex min-h-full items-stretch">
+            <div className="flex min-h-full items-stretch justify-center">
               {columns.map((column) => {
                 const columnTasks = getOrderedColumnTasks(displayedTasks, column.id);
                 return (

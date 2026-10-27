@@ -19,7 +19,7 @@ import { commentRoutes } from "./comments/comment-routes.js";
 export const boardRoutes = (store: BoardStore, events: BoardEvents) => {
   const router = Router();
   router.use(commentRoutes(store, events));
-  const actor = (response: Response) => (response.locals.user as { name: string }).name;
+  const actor = (response: Response) => (response.locals.user as { username: string }).username;
   const parse = <T>(schema: z.ZodType<T>, value: unknown): T => {
     const result = schema.safeParse(value);
     if (!result.success) throw new HttpError(400, "Invalid task data.");

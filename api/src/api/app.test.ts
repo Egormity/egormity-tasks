@@ -75,57 +75,53 @@ it("protects board data and accepts the configured local administrator", async (
   expect((await call("/board", undefined, false)).status).toBe(401);
   expect((await call("/board")).status).toBe(200);
   expect(
-    (await call("/login", { email: "admin@example", password: "wrong-password" }, false))
+    (await call("/login", { username: "admin@example", password: "wrong-password" }, false))
       .status,
   ).toBe(401);
   const login = await call(
     "/login",
-    { email: "admin@example", password: testAdminPassword },
+    { username: "admin@example", password: testAdminPassword },
     false,
   );
   expect(login.status).toBe(200);
   expect(await login.json()).toMatchObject({
-    email: "admin@example",
-    name: "Admin",
+    username: "admin@example",
+    role: "admin",
   });
 });
 
 it("creates and edits users, applies roles to sign-in, and restricts user management to admins", async () => {
   const initialUsers = await call("/users");
   expect(initialUsers.status).toBe(200);
-  const listedUsers = (await initialUsers.json()) as Array<{ id: string; email: string }>;
-  expect(listedUsers).toMatchObject([{ email: "admin@example", name: "Admin", role: "admin" }]);
+  const listedUsers = (await initialUsers.json()) as Array<{ id: string; username: string }>;
+  expect(listedUsers).toMatchObject([{ username: "admin@example", role: "admin" }]);
   const selfRoleChange = await call(`/users/${listedUsers[0]!.id}`, {
-    name: "Admin",
-    email: "admin@example",
+    username: "admin@example",
     role: "manager",
   });
   expect(selfRoleChange.status).toBe(409);
 
   const createdResponse = await call("/users", {
-    name: "Team Manager",
-    email: "Manager@Example.test",
+    username: "Team Manager",
     role: "manager",
     password: "manager-password-86f92e",
   });
   expect(createdResponse.status).toBe(201);
   const created = (await createdResponse.json()) as {
     id: string;
-    email: string;
-    name: string;
+    username: string;
     role: string;
     password?: string;
   };
   expect(created).toMatchObject({
-    email: "manager@example.test",
-    name: "Team Manager",
+    username: "Team Manager",
     role: "manager",
   });
   expect(created.password).toBeUndefined();
 
   const managerLogin = await call(
     "/login",
-    { email: created.email, password: "manager-password-86f92e" },
+    { username: created.username, password: "manager-password-86f92e" },
     false,
   );
   expect(managerLogin.status).toBe(200);
@@ -138,30 +134,34 @@ it("creates and edits users, applies roles to sign-in, and restricts user manage
   expect((await call("/board", undefined, true, undefined, managerToken)).status).toBe(200);
 
   const adminRoleChange = await call(`/users/${created.id}`, {
-    name: "Team Admin",
-    email: created.email,
+    username: "Team Admin",
     role: "admin",
     password: "updated-manager-password-45c7a2",
   });
   expect(adminRoleChange.status).toBe(200);
   expect((await call("/session", undefined, true, undefined, managerToken)).status).toBe(401);
   expect(
-    (await call("/login", { email: created.email, password: "manager-password-86f92e" }, false))
-      .status,
+    (
+      await call(
+        "/login",
+        { username: created.username, password: "manager-password-86f92e" },
+        false,
+      )
+    ).status,
   ).toBe(401);
   const updatedLogin = await call(
     "/login",
-    { email: created.email, password: "updated-manager-password-45c7a2" },
+    { username: "Team Admin", password: "updated-manager-password-45c7a2" },
     false,
   );
   expect(updatedLogin.status).toBe(200);
-  expect(await updatedLogin.json()).toMatchObject({ name: "Team Admin", role: "admin" });
+  expect(await updatedLogin.json()).toMatchObject({ username: "Team Admin", role: "admin" });
 });
 
 it("uses an HttpOnly secure cookie and rejects cross-origin mutations", async () => {
   const response = await call(
     "/login",
-    { email: "admin@example", password: testAdminPassword },
+    { username: "admin@example", password: testAdminPassword },
     false,
   );
   expect(response.status).toBe(200);

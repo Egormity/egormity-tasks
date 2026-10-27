@@ -210,7 +210,7 @@ it("persists comments and binary attachments atomically, broadcasts SSE, and ret
   expect(saved.status).toBe(201);
   const comment = (await saved.json()) as TaskComment;
   expect(comment.text).toBe("Design reference");
-  expect(comment.author.name).toBe("Admin");
+  expect(comment.author.name).toBe("admin@example");
   expect(comment.attachments[0]).toMatchObject({
     name: "референс.png",
     size: bytes.length,

@@ -53,7 +53,9 @@ export const UsersPage = ({
       setUsers((current) =>
         editor.user
           ? current.map((item) => (item.id === saved.id ? saved : item))
-          : [...current, saved].sort((left, right) => left.name.localeCompare(right.name)),
+          : [...current, saved].sort((left, right) =>
+              left.username.localeCompare(right.username),
+            ),
       );
       const ownPasswordChanged = editor.user?.id === currentUser.id && Boolean(password);
       setEditor(null);
@@ -109,15 +111,12 @@ export const UsersPage = ({
             <p className="text-muted p-8 text-center text-sm">{copy.emptyUsers}</p>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[620px] text-left text-xs">
+              <table className="w-full min-w-[440px] text-left text-xs">
                 <caption className="sr-only">{copy.userManagementTitle}</caption>
                 <thead className="border-line text-muted border-b text-xs uppercase tracking-wide">
                   <tr>
                     <th className="px-3 py-2 font-medium" scope="col">
-                      {copy.name}
-                    </th>
-                    <th className="px-3 py-2 font-medium" scope="col">
-                      {copy.email}
+                      {copy.username}
                     </th>
                     <th className="px-3 py-2 font-medium" scope="col">
                       {copy.role}
@@ -130,8 +129,7 @@ export const UsersPage = ({
                 <tbody className="divide-line divide-y">
                   {users.map((user) => (
                     <tr className="hover:bg-canvas/70" key={user.id}>
-                      <td className="px-3 py-2 font-medium">{user.name}</td>
-                      <td className="text-muted px-3 py-2">{user.email}</td>
+                      <td className="px-3 py-2 font-medium">{user.username}</td>
                       <td className="px-3 py-2">
                         <span className="border-line bg-canvas rounded-sm border px-1.5 py-0.5 text-[12px] font-medium">
                           {user.role === "admin" ? copy.adminRole : copy.managerRole}

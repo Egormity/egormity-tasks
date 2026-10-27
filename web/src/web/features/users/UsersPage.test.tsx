@@ -9,8 +9,7 @@ import { UsersPage } from "./UsersPage";
 
 const admin: User = {
   id: "00000000-0000-5000-8000-000000000001",
-  name: "Administrator",
-  email: "admin@example.test",
+  username: "admin",
   role: "admin",
 };
 
@@ -61,11 +60,10 @@ it("lists accounts and creates and edits users through the modal", async () => {
     </PreferencesProvider>,
   );
 
-  expect(await screen.findByText("admin@example.test")).toBeTruthy();
+  expect(await screen.findByText("admin")).toBeTruthy();
   fireEvent.click(screen.getByRole("button", { name: "Add user" }));
-  fireEvent.change(screen.getByLabelText("Name"), { target: { value: "Team Manager" } });
-  fireEvent.change(screen.getByLabelText("Email address"), {
-    target: { value: "manager@example.test" },
+  fireEvent.change(screen.getByLabelText("Username"), {
+    target: { value: "team-manager" },
   });
   fireEvent.change(screen.getByLabelText("Role"), { target: { value: "manager" } });
   fireEvent.change(screen.getByLabelText(/Password/u), {
@@ -73,13 +71,13 @@ it("lists accounts and creates and edits users through the modal", async () => {
   });
   fireEvent.click(screen.getByRole("button", { name: "Save" }));
 
-  const managerRow = await screen.findByRole("row", { name: /manager@example\.test/u });
+  const managerRow = await screen.findByRole("row", { name: /team-manager/u });
   expect(within(managerRow).getByText("Manager")).toBeTruthy();
   fireEvent.click(within(managerRow).getByRole("button", { name: "Edit" }));
-  fireEvent.change(screen.getByLabelText("Name"), { target: { value: "Project Manager" } });
+  fireEvent.change(screen.getByLabelText("Username"), { target: { value: "project-manager" } });
   fireEvent.change(screen.getByLabelText("Role"), { target: { value: "admin" } });
   fireEvent.click(screen.getByRole("button", { name: "Save" }));
 
-  await waitFor(() => expect(screen.getByText("Project Manager")).toBeTruthy());
-  expect(users.find((user) => user.email === "manager@example.test")?.role).toBe("admin");
+  await waitFor(() => expect(screen.getByText("project-manager")).toBeTruthy());
+  expect(users.find((user) => user.username === "project-manager")?.role).toBe("admin");
 });

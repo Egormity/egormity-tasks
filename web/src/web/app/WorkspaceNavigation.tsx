@@ -36,6 +36,12 @@ export const WorkspaceNavigation = ({
           </AppLink>
         ))}
       </nav>
+      <span
+        className="text-muted hidden max-w-32 truncate text-xs sm:block"
+        title={user.username}
+      >
+        {user.username}
+      </span>
       <PreferenceControls />
       <button
         type="button"

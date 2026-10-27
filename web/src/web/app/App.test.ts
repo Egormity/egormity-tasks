@@ -45,8 +45,7 @@ beforeEach(() => {
       if (path === "/api/session")
         body = {
           id: "admin",
-          name: "Administrator",
-          email: "admin@example.test",
+          username: "admin",
           role: sessionRole,
         };
       if (path === "/api/board") body = { cards: [], tags: [] };
@@ -82,6 +81,7 @@ it("renders the localized board and users pages and persists preferences", async
   await render();
   expect(host.querySelector('a[href="/tasks"]')?.textContent).toBe("Задачи");
   expect(host.querySelectorAll("nav a")).toHaveLength(3);
+  expect(host.textContent).toContain("admin");
   expect(host.querySelector("main")?.getAttribute("aria-label")).toBe("Задачи");
   expect(paths).toContain("/api/board");
   const language = host.querySelectorAll("select")[0]!;
@@ -138,7 +138,7 @@ it("keeps language and appearance settings out of the sign-in screen", async () 
     new Response(JSON.stringify({ error: "Not signed in" }), { status: 401 }),
   );
   await render();
-  expect(host.querySelector('input[name="email"]')).not.toBeNull();
+  expect(host.querySelector('input[name="username"]')).not.toBeNull();
   expect(host.querySelector('input[name="password"]')).not.toBeNull();
   expect(host.querySelectorAll("select")).toHaveLength(0);
 });

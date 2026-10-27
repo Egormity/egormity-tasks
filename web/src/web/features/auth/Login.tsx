@@ -16,7 +16,7 @@ export const Login = ({ onLogin }: { onLogin: (user: User) => void }) => {
     try {
       onLogin(
         await request<User>("/login", {
-          email: data.get("email"),
+          username: data.get("username"),
           password: data.get("password"),
         }),
       );
@@ -36,12 +36,11 @@ export const Login = ({ onLogin }: { onLogin: (user: User) => void }) => {
         <p className="text-muted mt-3 text-sm leading-6">{copy.loginDescription}</p>
         <form className="mt-8 grid gap-5" onSubmit={(event) => void submit(event)}>
           <label className="grid gap-2 text-sm">
-            {copy.email}
+            {copy.username}
             <input
               className="border-line bg-canvas outline-accent rounded-lg border p-3"
-              name="email"
+              name="username"
               type="text"
-              inputMode="email"
               autoComplete="username"
               required
               disabled={pending}

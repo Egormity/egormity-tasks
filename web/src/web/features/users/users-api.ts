@@ -1,7 +1,7 @@
 import { request } from "@/shared/http/api";
 import type { User } from "@contracts/auth.js";
 
-export type UserInput = Pick<User, "name" | "email" | "role"> & {
+export type UserInput = Pick<User, "username" | "role"> & {
   password?: string;
 };
 

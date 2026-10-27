@@ -11,8 +11,7 @@ export type UserCredentials = User & {
 
 type UserRow = {
   id: string;
-  name: string;
-  email: string;
+  username: string;
   role: "admin" | "manager";
   passwordHash: string;
   sessionVersion: number;
@@ -51,63 +50,73 @@ export class UserStore {
         updatedAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
       );
     `);
+    const userColumns = db.prepare("PRAGMA table_info(app_users)").all() as Array<{
+      name: string;
+    }>;
+    if (!userColumns.some((column) => column.name === "username")) {
+      db.exec("ALTER TABLE app_users ADD COLUMN username TEXT");
+      db.exec("UPDATE app_users SET username = email WHERE username IS NULL");
+    }
+    db.exec(
+      "CREATE UNIQUE INDEX IF NOT EXISTS app_users_username_unique ON app_users(username COLLATE NOCASE)",
+    );
     db.prepare(
-      "INSERT OR IGNORE INTO app_users (id, name, email, role, passwordHash, sessionVersion) VALUES (?, ?, ?, ?, ?, 0)",
+      "INSERT OR IGNORE INTO app_users (id, name, email, role, passwordHash, sessionVersion, username) VALUES (?, ?, ?, ?, ?, 0, ?)",
     ).run(
       bootstrapAdmin.id,
-      bootstrapAdmin.name,
-      bootstrapAdmin.email,
+      bootstrapAdmin.username,
+      bootstrapAdmin.username,
       bootstrapAdmin.role,
       bootstrapPasswordHash,
+      bootstrapAdmin.username,
     );
   }
 
   findById = (id: string): UserCredentials | null => {
     const row = this.db
       .prepare(
-        "SELECT id, name, email, role, passwordHash, sessionVersion FROM app_users WHERE id = ?",
+        "SELECT id, username, role, passwordHash, sessionVersion FROM app_users WHERE id = ?",
       )
       .get(id) as UserRow | undefined;
     return row ?? null;
   };
 
-  findByEmail = (email: string): UserCredentials | null => {
+  findByUsername = (username: string): UserCredentials | null => {
     const row = this.db
       .prepare(
-        "SELECT id, name, email, role, passwordHash, sessionVersion FROM app_users WHERE email = ?",
+        "SELECT id, username, role, passwordHash, sessionVersion FROM app_users WHERE username = ? COLLATE NOCASE",
       )
-      .get(email.trim().toLowerCase()) as UserRow | undefined;
+      .get(username.trim()) as UserRow | undefined;
     return row ?? null;
   };
 
   list = (): User[] =>
     this.db
-      .prepare(
-        "SELECT id, name, email, role FROM app_users ORDER BY name COLLATE NOCASE, email",
-      )
+      .prepare("SELECT id, username, role FROM app_users ORDER BY username COLLATE NOCASE")
       .all() as User[];
 
-  create = (input: {
-    name: string;
-    email: string;
-    role: User["role"];
-    password: string;
-  }): User => {
+  create = (input: { username: string; role: User["role"]; password: string }): User => {
     const user: User = {
       id: randomUUID(),
-      name: input.name,
-      email: input.email,
+      username: input.username,
       role: input.role,
     };
     try {
       this.db
         .prepare(
-          "INSERT INTO app_users (id, name, email, role, passwordHash, sessionVersion) VALUES (?, ?, ?, ?, ?, 0)",
+          "INSERT INTO app_users (id, name, email, role, passwordHash, sessionVersion, username) VALUES (?, ?, ?, ?, ?, 0, ?)",
         )
-        .run(user.id, user.name, user.email, user.role, hashPassword(input.password));
+        .run(
+          user.id,
+          user.username,
+          user.username,
+          user.role,
+          hashPassword(input.password),
+          user.username,
+        );
     } catch (error) {
-      if (isEmailConflict(error))
-        throw new HttpError(409, "A user with this email already exists.");
+      if (isUsernameConflict(error))
+        throw new HttpError(409, "A user with this username already exists.");
       throw error;
     }
     return user;
@@ -117,8 +126,7 @@ export class UserStore {
     id: string,
     actorId: string,
     input: {
-      name: string;
-      email: string;
+      username: string;
       role: User["role"];
       password?: string | undefined;
     },
@@ -134,33 +142,34 @@ export class UserStore {
       if (admins.count <= 1)
         throw new HttpError(409, "At least one admin account must remain.");
     }
-    const user: User = { id, name: input.name, email: input.email, role: input.role };
+    const user: User = { id, username: input.username, role: input.role };
     try {
       this.db
         .prepare(
           `UPDATE app_users
-           SET name = ?, email = ?, role = ?,
+           SET name = ?, email = ?, username = ?, role = ?,
                passwordHash = COALESCE(?, passwordHash),
                sessionVersion = sessionVersion + ?,
                updatedAt = CURRENT_TIMESTAMP
            WHERE id = ?`,
         )
         .run(
-          user.name,
-          user.email,
+          user.username,
+          user.username,
+          user.username,
           user.role,
           input.password ? hashPassword(input.password) : null,
           input.password || input.role !== current.role ? 1 : 0,
           id,
         );
     } catch (error) {
-      if (isEmailConflict(error))
-        throw new HttpError(409, "A user with this email already exists.");
+      if (isUsernameConflict(error))
+        throw new HttpError(409, "A user with this username already exists.");
       throw error;
     }
     return user;
   };
 }
 
-const isEmailConflict = (error: unknown) =>
-  error instanceof Error && error.message.includes("app_users.email");
+const isUsernameConflict = (error: unknown) =>
+  error instanceof Error && error.message.includes("app_users.username");
