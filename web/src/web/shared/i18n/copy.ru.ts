@@ -1,8 +1,7 @@
 import type { Copy } from "./copy";
 
 export const ru: Copy = {
-  brand: "Amazi",
-  title: "Рабочее пространство",
+  brand: "Amazi tasks",
   loginTitle: "С возвращением",
   loginDescription: "Войдите с учётной записью рабочего пространства.",
   username: "Имя пользователя",

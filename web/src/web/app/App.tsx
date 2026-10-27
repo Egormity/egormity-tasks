@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { Toaster } from "sonner";
 
 import { Login } from "@/features/auth/Login";
 import { request } from "@/shared/http/api";
@@ -50,7 +51,7 @@ const Workspace = ({ user, onLogout }: { user: User; onLogout: () => void }) => 
 };
 
 export const App = () => {
-  const { copy } = usePreferences();
+  const { copy, theme } = usePreferences();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const logout = useCallback(() => setUser(null), []);
@@ -60,8 +61,16 @@ export const App = () => {
       .catch(() => setUser(null))
       .finally(() => setLoading(false));
   }, []);
-  if (loading)
-    return <div className="text-muted grid min-h-dvh place-items-center">{copy.loading}</div>;
-  if (!user) return <Login onLogin={setUser} />;
-  return <Workspace user={user} onLogout={logout} />;
+  return (
+    <>
+      <Toaster theme={theme} richColors closeButton />
+      {loading ? (
+        <div className="text-muted grid min-h-dvh place-items-center">{copy.loading}</div>
+      ) : user ? (
+        <Workspace user={user} onLogout={logout} />
+      ) : (
+        <Login onLogin={setUser} />
+      )}
+    </>
+  );
 };

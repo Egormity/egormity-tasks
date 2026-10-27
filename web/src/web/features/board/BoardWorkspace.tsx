@@ -1,6 +1,6 @@
 import { QueryClientProvider } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { Toaster, toast } from "sonner";
+import { toast } from "sonner";
 
 import { ApiError } from "@/shared/http/api";
 import { localizeError } from "@/shared/http/errors";
@@ -18,7 +18,7 @@ export const BoardWorkspace = ({
   archived: boolean;
   onSessionExpired: () => void;
 }) => {
-  const { theme, locale } = usePreferences();
+  const { locale } = usePreferences();
   const [client] = useState(() => {
     const onError = (error: Error) => {
       if (error instanceof ApiError && [401, 403].includes(error.status)) onSessionExpired();
@@ -42,7 +42,6 @@ export const BoardWorkspace = ({
       <div className="bg-board-canvas min-h-0 min-w-0 flex-1 overflow-auto" lang={locale}>
         <BoardPage archived={archived} />
       </div>
-      <Toaster theme={theme} richColors closeButton />
     </QueryClientProvider>
   );
 };

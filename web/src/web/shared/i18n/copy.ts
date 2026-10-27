@@ -1,6 +1,5 @@
 export const en = {
-  brand: "Amazi",
-  title: "Operations",
+  brand: "Amazi tasks",
   loginTitle: "Welcome back",
   loginDescription: "Sign in with your workspace account.",
   username: "Username",

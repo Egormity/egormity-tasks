@@ -51,7 +51,7 @@ const read = (): Preferences => {
 const apply = (value: Preferences) => {
   document.documentElement.dataset.theme = value.theme;
   document.documentElement.lang = value.locale;
-  document.title = value.locale === "ru" ? "Задачи · Amazi" : "Tasks · Amazi";
+  document.title = "Amazi tasks";
 };
 
 export const initializePreferences = () => apply(read());
