@@ -2,6 +2,21 @@
 @import "./features/board/board-theme.css";
 
 @theme {
+  --spacing: 0.3125rem;
+  --text-xs: 0.9375rem;
+  --text-xs--line-height: 1.25rem;
+  --text-sm: 1.125rem;
+  --text-sm--line-height: 1.5625rem;
+  --text-base: 1.25rem;
+  --text-base--line-height: 1.875rem;
+  --text-lg: 1.375rem;
+  --text-lg--line-height: 2.1875rem;
+  --text-xl: 1.5625rem;
+  --text-xl--line-height: 2.1875rem;
+  --text-2xl: 1.875rem;
+  --text-2xl--line-height: 2.5rem;
+  --text-3xl: 2.375rem;
+  --text-3xl--line-height: 2.8125rem;
   --font-sans: "Inter", "Segoe UI", system-ui, sans-serif;
   --radius-sm: 2px;
   --radius-md: 3px;

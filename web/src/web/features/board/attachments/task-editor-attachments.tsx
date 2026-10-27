@@ -33,7 +33,7 @@ export const TaskEditorAttachments = ({
           </p>
         </div>
         <button
-          className="border-board-button-border bg-board-surface text-board-button-text hover:border-board-button-border-hover hover:bg-board-button-hover focus-visible:ring-board-accent inline-flex min-h-7 shrink-0 items-center gap-1.5 rounded-sm border px-2 text-[11px] font-medium transition focus-visible:ring-2 focus-visible:outline-none"
+          className="border-board-button-border bg-board-surface text-board-button-text hover:border-board-button-border-hover hover:bg-board-button-hover focus-visible:ring-board-accent inline-flex min-h-7 shrink-0 items-center gap-1.5 rounded-sm border px-2 text-[14px] font-medium transition focus-visible:ring-2 focus-visible:outline-none"
           onClick={onChooseFiles}
           type="button"
         >

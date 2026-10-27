@@ -102,7 +102,7 @@ export const TaskCard = ({
         </div>
 
         {task.description && (
-          <p className="text-board-muted mt-1 line-clamp-1 min-w-0 text-[11px] leading-4">
+          <p className="text-board-muted mt-1 line-clamp-1 min-w-0 text-[14px] leading-4">
             {task.description}
           </p>
         )}
@@ -113,7 +113,7 @@ export const TaskCard = ({
               <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1">
                 {tags.map((tag) => (
                   <span
-                    className={`max-w-[11rem] shrink-0 truncate rounded-sm px-1.5 py-0.5 text-[10px] leading-3 font-medium ${taskTagToneStyles[tag.tone]}`}
+                    className={`max-w-[11rem] shrink-0 truncate rounded-sm px-1.5 py-0.5 text-[12px] leading-3 font-medium ${taskTagToneStyles[tag.tone]}`}
                     key={tag.id}
                     title={tag.name}
                   >
@@ -125,7 +125,7 @@ export const TaskCard = ({
             {task.attachments.length > 0 && (
               <span
                 aria-label={boardText("{0} вложений", task.attachments.length)}
-                className="text-board-icon ml-auto inline-flex shrink-0 items-center gap-1 py-0.5 text-[10px] leading-3 font-medium"
+                className="text-board-icon ml-auto inline-flex shrink-0 items-center gap-1 py-0.5 text-[12px] leading-3 font-medium"
                 title={boardText("{0} вложений", task.attachments.length)}
               >
                 <Paperclip aria-hidden="true" className="size-3" />
@@ -140,7 +140,7 @@ export const TaskCard = ({
         <div className="mt-1.5 flex justify-end">
           <button
             aria-busy={isRestoring}
-            className="bg-board-selected text-board-accent hover:bg-board-selected-hover focus-visible:ring-board-accent inline-flex min-h-6 items-center gap-1 rounded-sm px-2 text-[10px] font-medium focus-visible:ring-2 disabled:cursor-not-allowed disabled:opacity-60"
+            className="bg-board-selected text-board-accent hover:bg-board-selected-hover focus-visible:ring-board-accent inline-flex min-h-6 items-center gap-1 rounded-sm px-2 text-[12px] font-medium focus-visible:ring-2 disabled:cursor-not-allowed disabled:opacity-60"
             disabled={isRestoring}
             onClick={() => onRestore?.(task)}
             type="button"

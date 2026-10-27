@@ -133,7 +133,7 @@ export const UsersPage = ({
                       <td className="px-3 py-2 font-medium">{user.name}</td>
                       <td className="text-muted px-3 py-2">{user.email}</td>
                       <td className="px-3 py-2">
-                        <span className="border-line bg-canvas rounded-sm border px-1.5 py-0.5 text-[10px] font-medium">
+                        <span className="border-line bg-canvas rounded-sm border px-1.5 py-0.5 text-[12px] font-medium">
                           {user.role === "admin" ? copy.adminRole : copy.managerRole}
                         </span>
                       </td>

@@ -37,7 +37,7 @@ export const WorkspaceHeader = ({ user, page, onLogout }: HeaderProps) => {
           title={`${user.name} · ${role}`}
         >
           <p className="max-w-36 truncate text-xs font-medium">{user.name}</p>
-          <p className="text-muted truncate text-[10px]">{role}</p>
+          <p className="text-muted truncate text-[12px]">{role}</p>
         </div>
         <button
           type="button"
@@ -46,7 +46,7 @@ export const WorkspaceHeader = ({ user, page, onLogout }: HeaderProps) => {
           className="text-muted hover:bg-canvas hover:text-ink focus-visible:ring-accent grid size-7 shrink-0 place-items-center rounded-sm outline-none focus-visible:ring-1"
           onClick={() => void request("/logout", {}).then(onLogout, onLogout)}
         >
-          <LogOut aria-hidden="true" size={14} />
+          <LogOut aria-hidden="true" size={18} />
         </button>
       </div>
     </header>

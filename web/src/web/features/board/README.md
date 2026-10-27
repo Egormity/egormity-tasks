@@ -14,7 +14,8 @@ database credentials, or project storage tokens are required by the frontend.
 
 `BoardWorkspace.tsx` owns the administrator-scoped query cache, session expiry, notifications,
 and preference rerenders. `i18n/board-copy.catalog.ts` adds English translations to the original Russian
-copy; `board-theme.css` gives the original colors named tokens and dark equivalents. The layout uses compact cards, adjoining columns and crisp borders. Application navigation and appearance/language
+copy; `board-theme.css` gives the original colors named tokens and dark equivalents. The layout uses adjoining columns and crisp borders. Shared typography and spacing tokens in
+`styles.css` keep text and controls readable; columns have a 220px minimum width. Application navigation and appearance/language
 controls belong to the workspace header; archive navigation stays within Tasks.
 Task view omits the attachment section when the task has no attachments.
 Opening a card shows its details, comments, attachments, tags and event history in the task dialog.

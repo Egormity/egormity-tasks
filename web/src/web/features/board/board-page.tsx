@@ -92,7 +92,7 @@ export const BoardPage = () => {
       archived={archived}
       onToggleArchive={() => setArchived((value) => !value)}
       headerSummary={
-        <span className="text-board-summary whitespace-nowrap text-[11px] tabular-nums">
+        <span className="text-board-summary whitespace-nowrap text-[14px] tabular-nums">
           {tasks.length} {boardText("задач в проекте")}
         </span>
       }
@@ -146,7 +146,7 @@ export const BoardPage = () => {
               return task && <TaskCard isOverlay task={task} />;
             }}
           </DragOverlay>
-          <div className="flex min-h-full min-w-[1080px] items-stretch">
+          <div className="flex min-h-full min-w-[1320px] items-stretch">
             {boardColumns.map((column) => {
               const columnTasks = getOrderedColumnTasks(displayedTasks, column.id);
               const allColumnTasks = getOrderedColumnTasks(
@@ -154,7 +154,7 @@ export const BoardPage = () => {
                 column.id,
               );
               return (
-                <div className="flex min-w-[180px] flex-1 flex-col" key={column.id}>
+                <div className="flex min-w-[220px] flex-1 flex-col" key={column.id}>
                   <BoardColumn
                     column={column}
                     insertionBeforeId={

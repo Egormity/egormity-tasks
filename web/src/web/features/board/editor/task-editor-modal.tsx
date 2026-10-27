@@ -165,7 +165,7 @@ export const TaskEditorModal = ({
       <Modal open={open} onOpenChange={onOpenChange}>
         <ModalContent
           {...getRootProps({ role: "dialog" })}
-          className={`flex !max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] !max-w-5xl flex-col overflow-hidden rounded-md border p-0 transition-[border-color,box-shadow] ${
+          className={`flex !max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] !max-w-6xl flex-col overflow-hidden rounded-md border p-0 transition-[border-color,box-shadow] ${
             isDragActive
               ? "border-board-accent ring-board-accent/20 ring-4"
               : "border-board-modal-border"

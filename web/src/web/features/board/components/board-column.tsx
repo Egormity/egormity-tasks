@@ -40,7 +40,7 @@ export const BoardColumn = ({
     <section
       ref={ref}
       data-board-column-id={column.id}
-      className={`bg-board-column-surface flex min-w-[180px] flex-1 flex-col overflow-hidden border-r transition-colors ${
+      className={`bg-board-column-surface flex min-w-[220px] flex-1 flex-col overflow-hidden border-r transition-colors ${
         insertionBeforeId !== undefined
           ? "border-board-drop-border bg-board-drop-surface"
           : "border-board-column-border"
@@ -55,11 +55,11 @@ export const BoardColumn = ({
         <div className="flex min-w-0 flex-1 items-center gap-1.5">
           <h2
             title={boardText(column.label)}
-            className="text-board-column-title truncate text-[11px] font-semibold"
+            className="text-board-column-title truncate text-[14px] font-semibold"
           >
             {boardText(column.label)}
           </h2>
-          <span className="bg-board-count-surface text-board-count shrink-0 rounded-sm px-1.5 py-0.5 text-[10px] tabular-nums">
+          <span className="bg-board-count-surface text-board-count shrink-0 rounded-sm px-1.5 py-0.5 text-[12px] tabular-nums">
             {tasks.length}
           </span>
         </div>
@@ -94,7 +94,7 @@ export const BoardColumn = ({
             </div>
           ))
         ) : (
-          <div className="text-board-subtle relative grid min-h-16 place-items-center px-2 py-4 text-center text-[11px]">
+          <div className="text-board-subtle relative grid min-h-16 place-items-center px-2 py-4 text-center text-[14px]">
             {insertionBeforeId === null && <DropIndicator />}
             {boardText("Нет подходящих задач")}
           </div>

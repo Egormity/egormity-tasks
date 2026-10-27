@@ -51,7 +51,7 @@ export const TaskEditorTags = ({
             <div className="flex flex-wrap gap-2">
               {selectedTags.map((tag) => (
                 <span
-                  className={`rounded-sm px-1.5 py-0.5 text-[11px] font-medium ${taskTagToneStyles[tag.tone]}`}
+                  className={`rounded-sm px-1.5 py-0.5 text-[14px] font-medium ${taskTagToneStyles[tag.tone]}`}
                   key={tag.id}
                 >
                   {tag.name}
@@ -65,7 +65,7 @@ export const TaskEditorTags = ({
           )
         ) : tags.length > 0 ? (
           <div className="space-y-2">
-            <p className="text-board-summary mb-2 text-[11px]">
+            <p className="text-board-summary mb-2 text-[14px]">
               {boardText("Выберите один или несколько тегов для этой карточки.")}
             </p>
             <div className="grid gap-1.5 sm:grid-cols-2">
@@ -83,7 +83,7 @@ export const TaskEditorTags = ({
                       onChange={() => onToggleTag?.(tag.id)}
                     />
                     <span
-                      className={`max-w-full min-w-0 truncate rounded-sm px-1.5 py-0.5 text-[11px] font-medium ${taskTagToneStyles[tag.tone]}`}
+                      className={`max-w-full min-w-0 truncate rounded-sm px-1.5 py-0.5 text-[14px] font-medium ${taskTagToneStyles[tag.tone]}`}
                     >
                       {tag.name}
                     </span>

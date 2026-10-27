@@ -27,12 +27,12 @@ export const TrackerShell = ({
 }: TrackerShellProps) => (
   <section className="flex h-full min-h-0 w-full flex-col">
     <div className="border-board-divider bg-board-surface flex shrink-0 flex-wrap items-center gap-2 border-b px-3 py-2">
-      <div className="mr-auto flex min-w-0 items-center gap-2 sm:mr-2">
-        <h1 className="text-board-heading truncate text-[13px] font-semibold">{title}</h1>
-        {headerSummary && <div className="hidden sm:block">{headerSummary}</div>}
+      <div className="mr-auto flex min-w-0 items-center gap-2 md:mr-2">
+        <h1 className="text-board-heading truncate text-[16px] font-semibold">{title}</h1>
+        {headerSummary && <div className="hidden md:block">{headerSummary}</div>}
       </div>
       {onSearchChange && (
-        <label className="group relative order-last block w-full min-w-0 sm:order-none sm:w-auto sm:flex-1">
+        <label className="group relative order-last block w-full min-w-0 md:order-none md:w-auto md:flex-1">
           <span className="sr-only">{boardText("Поиск задач")}</span>
           <Search
             aria-hidden="true"
@@ -51,7 +51,7 @@ export const TrackerShell = ({
         type="button"
         onClick={onToggleArchive}
         aria-pressed={archived}
-        className="border-board-button-border text-board-button-text hover:bg-board-selected flex h-7 shrink-0 items-center gap-1.5 rounded-sm border px-2 text-[11px]"
+        className="border-board-button-border text-board-button-text hover:bg-board-selected flex h-7 shrink-0 items-center gap-1.5 rounded-sm border px-2 text-[14px]"
       >
         <Archive aria-hidden="true" className="size-3.5" />
         {boardText(archived ? "Активные задачи" : "Архив")}

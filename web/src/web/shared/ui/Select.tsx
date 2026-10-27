@@ -25,7 +25,7 @@ export const Select = <Value extends string>({
     <span className={hideLabel ? "sr-only" : undefined}>{label}</span>
     <span className="relative block min-w-0">
       <select
-        className={`border-line bg-canvas text-ink focus-visible:border-accent focus-visible:ring-accent w-full min-w-0 appearance-none border outline-none focus-visible:ring-1 disabled:cursor-not-allowed disabled:opacity-50 ${compact ? "h-7 rounded-sm py-0 pr-6 pl-2 text-[11px]" : "rounded-md py-1.5 pr-7 pl-2.5 text-xs"} ${className}`}
+        className={`border-line bg-canvas text-ink focus-visible:border-accent focus-visible:ring-accent w-full min-w-0 appearance-none border outline-none focus-visible:ring-1 disabled:cursor-not-allowed disabled:opacity-50 ${compact ? "h-7 rounded-sm py-0 pr-6 pl-2 text-[14px]" : "rounded-md py-1.5 pr-7 pl-2.5 text-xs"} ${className}`}
         value={value}
         disabled={disabled}
         onChange={(event) => {
