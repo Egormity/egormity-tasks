@@ -7,7 +7,6 @@ import type { BoardDivider } from "@contracts/board-columns.js";
 
 import { boardText } from "@/features/board/i18n/board-copy";
 import { getOrderedColumnItems } from "@/features/board/dnd/task-board-order";
-import { BoardDividerItem } from "./board-divider-item";
 
 type BoardColumnProps = {
   readonly column: BoardColumnType;
@@ -16,9 +15,6 @@ type BoardColumnProps = {
   readonly onOpen: (task: Task) => void;
   readonly tasks: readonly Task[];
   readonly dividers: readonly BoardDivider[];
-  readonly dividerBusy: boolean;
-  readonly onEditDivider: (divider: BoardDivider, title: string) => void;
-  readonly onRemoveDivider: (divider: BoardDivider) => void;
   readonly insertionBeforeId?: string | null | undefined;
 };
 
@@ -29,9 +25,6 @@ export const BoardColumn = ({
   onOpen,
   tasks,
   dividers,
-  dividerBusy,
-  onEditDivider,
-  onRemoveDivider,
   insertionBeforeId,
 }: BoardColumnProps) => {
   const items = getOrderedColumnItems(tasks, dividers, column.id);
@@ -92,12 +85,13 @@ export const BoardColumn = ({
             {item.kind === "task" ? (
               <DraggableTaskCard dragDisabled={dragDisabled} onOpen={onOpen} task={item.task} />
             ) : (
-              <BoardDividerItem
-                busy={dividerBusy}
-                divider={item.divider}
-                onRemove={() => onRemoveDivider(item.divider)}
-                onSave={(title) => onEditDivider(item.divider, title)}
-              />
+              <div className="flex min-h-9 items-center gap-2 px-1" role="separator">
+                <span aria-hidden="true" className="bg-board-divider h-px min-w-3 flex-1" />
+                <span className="text-board-secondary max-w-48 truncate text-center text-[11px]">
+                  {item.divider.title}
+                </span>
+                <span aria-hidden="true" className="bg-board-divider h-px min-w-3 flex-1" />
+              </div>
             )}
           </div>
         ))}

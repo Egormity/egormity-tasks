@@ -1,5 +1,5 @@
 import { Check, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import type { BoardDivider } from "@contracts/board-columns.js";
 import { boardText } from "@/features/board/i18n/board-copy";
@@ -17,6 +17,8 @@ export const BoardDividerItem = ({
 }) => {
   const [title, setTitle] = useState(divider.title);
   const dirty = title.trim() !== divider.title;
+
+  useEffect(() => setTitle(divider.title), [divider.title]);
 
   return (
     <div className="flex min-h-9 items-center gap-1.5 px-1">

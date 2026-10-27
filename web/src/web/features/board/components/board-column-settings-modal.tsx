@@ -1,9 +1,11 @@
 import { ArrowLeft, ArrowRight, Download, SeparatorHorizontal, Trash2, X } from "lucide-react";
 import { useEffect, useState } from "react";
 
+import type { BoardDivider } from "@contracts/board-columns.js";
 import type { BoardColumn } from "@/features/board/data/task-data";
 import { colorInputValue } from "@/features/board/color-picker-utils";
 import { boardText } from "@/features/board/i18n/board-copy";
+import { BoardDividerItem } from "./board-divider-item";
 import { Modal, ModalClose, ModalContent, ModalFooter, ModalHeader, ModalTitle } from "./modal";
 
 type BoardColumnSettingsModalProps = {
@@ -12,6 +14,7 @@ type BoardColumnSettingsModalProps = {
   readonly columnIndex: number;
   readonly columnCount: number;
   readonly taskCount: number;
+  readonly dividers: readonly BoardDivider[];
   readonly busy: boolean;
   readonly exporting: boolean;
   readonly onOpenChange: (open: boolean) => void;
@@ -20,6 +23,8 @@ type BoardColumnSettingsModalProps = {
   readonly onDelete: () => void;
   readonly onExport: () => void;
   readonly onAddDivider: () => void;
+  readonly onEditDivider: (divider: BoardDivider, title: string) => void;
+  readonly onRemoveDivider: (divider: BoardDivider) => void;
 };
 
 export const BoardColumnSettingsModal = ({
@@ -28,6 +33,7 @@ export const BoardColumnSettingsModal = ({
   columnIndex,
   columnCount,
   taskCount,
+  dividers,
   busy,
   exporting,
   onOpenChange,
@@ -36,6 +42,8 @@ export const BoardColumnSettingsModal = ({
   onDelete,
   onExport,
   onAddDivider,
+  onEditDivider,
+  onRemoveDivider,
 }: BoardColumnSettingsModalProps) => {
   const [label, setLabel] = useState("");
   const [accent, setAccent] = useState("#b9bfca");
@@ -158,11 +166,11 @@ export const BoardColumnSettingsModal = ({
               <button
                 className="text-board-rose hover:bg-board-rose-surface inline-flex h-7 items-center gap-1.5 rounded-md px-2 text-[11px] font-medium disabled:opacity-40"
                 title={
-                  taskCount > 0
-                    ? boardText("Переместите задачи перед удалением колонки")
+                  taskCount > 0 || dividers.length > 0
+                    ? boardText("Уберите содержимое перед удалением колонки")
                     : undefined
                 }
-                disabled={busy || taskCount > 0 || columnCount < 2}
+                disabled={busy || taskCount > 0 || dividers.length > 0 || columnCount < 2}
                 onClick={onDelete}
                 type="button"
               >
@@ -170,6 +178,35 @@ export const BoardColumnSettingsModal = ({
                 {boardText("Удалить колонку")}
               </button>
             </div>
+          )}
+
+          {column && (
+            <section className="border-board-divider bg-board-canvas space-y-2 rounded-lg border p-2.5">
+              <h3 className="text-board-secondary text-[11px] font-semibold">
+                {boardText("Разделители")}
+              </h3>
+              {dividers.length > 0 ? (
+                <ul
+                  aria-label={boardText("Разделители")}
+                  className="max-h-48 space-y-1 overflow-y-auto"
+                >
+                  {dividers.map((divider) => (
+                    <li key={divider.id}>
+                      <BoardDividerItem
+                        busy={busy}
+                        divider={divider}
+                        onRemove={() => onRemoveDivider(divider)}
+                        onSave={(title) => onEditDivider(divider, title)}
+                      />
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-board-subtle text-[11px]">
+                  {boardText("Разделителей пока нет")}
+                </p>
+              )}
+            </section>
           )}
 
           <ModalFooter className="border-board-divider border-t pt-2.5">

@@ -259,9 +259,6 @@ export const BoardPage = ({ archived }: { archived: boolean }) => {
                       onOpen={openView}
                       tasks={columnTasks}
                       dividers={displayedDividers}
-                      dividerBusy={configureBoard.isPending}
-                      onEditDivider={handleEditDivider}
-                      onRemoveDivider={handleRemoveDivider}
                     />
                   </div>
                 );
@@ -281,6 +278,9 @@ export const BoardPage = ({ archived }: { archived: boolean }) => {
             ? taskCards.filter((card) => card.status === editingColumn.id).length
             : 0
         }
+        dividers={dividers
+          .filter((divider) => divider.columnId === editingColumn?.id)
+          .sort((first, second) => first.order - second.order)}
         busy={configureBoard.isPending}
         exporting={exportingColumnId === editingColumn?.id}
         onOpenChange={(open) => (open ? setSettingsOpen(true) : closeSettings())}
@@ -288,6 +288,8 @@ export const BoardPage = ({ archived }: { archived: boolean }) => {
         onMove={handleMoveColumn}
         onDelete={handleDeleteColumn}
         onAddDivider={handleAddDivider}
+        onEditDivider={handleEditDivider}
+        onRemoveDivider={handleRemoveDivider}
         onExport={() => {
           if (!editingColumn) return;
           const columnTasks = getOrderedColumnTasks(

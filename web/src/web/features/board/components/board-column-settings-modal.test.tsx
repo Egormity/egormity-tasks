@@ -14,6 +14,8 @@ it("keeps column settings compact, lets the user pick a color, reorder sideways,
   const onMove = vi.fn();
   const onExport = vi.fn();
   const onAddDivider = vi.fn();
+  const onEditDivider = vi.fn();
+  const onRemoveDivider = vi.fn();
   const onSave = vi.fn();
   render(
     <BoardColumnSettingsModal
@@ -22,6 +24,7 @@ it("keeps column settings compact, lets the user pick a color, reorder sideways,
       columnIndex={1}
       columnCount={3}
       taskCount={2}
+      dividers={[{ id: "divider-1", title: "Ready", columnId: "queue", order: 2 }]}
       busy={false}
       exporting={false}
       onOpenChange={vi.fn()}
@@ -30,6 +33,8 @@ it("keeps column settings compact, lets the user pick a color, reorder sideways,
       onAddDivider={onAddDivider}
       onDelete={vi.fn()}
       onSave={onSave}
+      onEditDivider={onEditDivider}
+      onRemoveDivider={onRemoveDivider}
     />,
   );
 
@@ -45,6 +50,22 @@ it("keeps column settings compact, lets the user pick a color, reorder sideways,
   expect(onMove.mock.calls).toEqual([[-1], [1]]);
   expect(onExport).toHaveBeenCalledOnce();
   expect(onAddDivider).toHaveBeenCalledOnce();
+  expect(screen.getByRole("list", { name: "Dividers" }).tagName).toBe("UL");
+  fireEvent.change(screen.getByRole("textbox", { name: "Section title" }), {
+    target: { value: "Ready to ship" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Save section title" }));
+  expect(onEditDivider).toHaveBeenCalledWith(
+    { id: "divider-1", title: "Ready", columnId: "queue", order: 2 },
+    "Ready to ship",
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Remove section" }));
+  expect(onRemoveDivider).toHaveBeenCalledWith({
+    id: "divider-1",
+    title: "Ready",
+    columnId: "queue",
+    order: 2,
+  });
 
   fireEvent.change(screen.getByRole("textbox", { name: "Column name" }), {
     target: { value: "Custom review" },

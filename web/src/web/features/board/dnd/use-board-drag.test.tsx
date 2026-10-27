@@ -75,9 +75,6 @@ const Harness = ({
           column={column}
           tasks={getOrderedColumnTasks(drag.displayedTasks, column.id)}
           dividers={drag.displayedDividers}
-          dividerBusy={false}
-          onEditDivider={() => {}}
-          onRemoveDivider={() => {}}
           dragDisabled={false}
           insertionBeforeId={
             drag.dropTarget?.status === column.id ? drag.dropTarget.beforeId : undefined
