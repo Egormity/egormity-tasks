@@ -16,13 +16,15 @@ database credentials, or project storage tokens are required by the frontend.
 and preference rerenders. `i18n/board-copy.catalog.ts` adds English translations to the original Russian
 copy; `board-theme.css` gives the original colors named tokens and dark equivalents. The layout uses adjoining columns and crisp borders. Shared typography and spacing tokens in
 `styles.css` keep text and controls readable; columns have a 220px minimum width. Application navigation and appearance/language
-controls belong to the workspace header; archive navigation stays within Tasks.
+controls belong to the workspace navigation. Tasks and Archive are separate direct pages (`/tasks`
+and `/archive`), with Users available to admins.
 Task view omits the attachment section when the task has no attachments.
 Opening a card shows its details, comments, attachments, tags and event history in the task dialog.
 `editor/use-task-editor.tsx` owns view/edit, archive and export actions. The drag handle remains
 independent on the right.
-On phones the toolbar wraps below the heading and task search remains available at full width.
-Columns scroll within the board on smaller screens; workspace navigation remains in the header.
+On phones the toolbar keeps task search available at full width. Tag management uses compact rows and
+a single scrollable list to keep many tags manageable on smaller screens. Columns scroll within the
+board on smaller screens.
 
 ## Live updates
 

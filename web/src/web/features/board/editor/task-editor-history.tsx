@@ -76,27 +76,27 @@ export const TaskEditorHistory = ({ events }: TaskEditorHistoryProps) => {
   return (
     <section
       aria-labelledby="task-history-heading"
-      className="border-board-section-border border-t pt-5"
+      className="border-board-section-border border-t pt-3"
     >
       <button
         aria-controls="task-history-content"
         aria-expanded={isOpen}
-        className="group hover:bg-board-canvas focus-visible:ring-board-accent flex w-full items-center justify-between gap-3 rounded-xl px-1 py-1 text-left transition focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+        className="group hover:bg-board-canvas focus-visible:ring-board-accent flex w-full items-center justify-between gap-2 rounded-md px-1 py-1 text-left transition focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
         onClick={() => setIsOpen((current) => !current)}
         type="button"
       >
-        <span className="flex items-center gap-2.5">
-          <span className="bg-board-history-surface text-board-icon grid size-8 place-items-center rounded-lg">
-            <History aria-hidden="true" className="size-4" />
+        <span className="flex items-center gap-2">
+          <span className="bg-board-history-surface text-board-icon grid size-7 place-items-center rounded-md">
+            <History aria-hidden="true" className="size-3.5" />
           </span>
           <span>
             <span
-              className="text-board-text block text-sm font-semibold"
+              className="text-board-text block text-xs font-semibold"
               id="task-history-heading"
             >
               {boardText("История событий")}
             </span>
-            <span className="text-board-subtle mt-0.5 block text-xs">
+            <span className="text-board-subtle mt-0.5 block text-[10px]">
               {events.length > 0
                 ? boardText("{0} событий", events.length)
                 : boardText("Событий пока нет")}
@@ -105,13 +105,13 @@ export const TaskEditorHistory = ({ events }: TaskEditorHistoryProps) => {
         </span>
         <ChevronDown
           aria-hidden="true"
-          className={`text-board-icon group-hover:text-board-accent-hover size-4 transition-transform ${isOpen ? "rotate-180" : ""}`}
+          className={`text-board-icon group-hover:text-board-accent-hover size-3.5 transition-transform ${isOpen ? "rotate-180" : ""}`}
         />
       </button>
 
       {isOpen && (
         <div
-          className="border-board-attachment-border bg-board-canvas mt-3 space-y-2 overflow-y-auto rounded-xl border p-3"
+          className="border-board-attachment-border bg-board-canvas mt-2 max-h-48 space-y-1 overflow-y-auto rounded-lg border p-2"
           id="task-history-content"
         >
           {events.length > 0 ? (
@@ -120,14 +120,17 @@ export const TaskEditorHistory = ({ events }: TaskEditorHistoryProps) => {
               const legacyText = getLegacyEventText(event);
               return (
                 <div
-                  className="bg-board-surface/70 space-y-1.5 rounded-lg p-2.5 text-xs"
+                  className="bg-board-surface/70 space-y-1 rounded-md p-2 text-[11px]"
                   key={event.id}
                 >
                   <div className="flex items-start justify-between gap-3">
                     <span className="text-board-event-text font-medium">
                       {getEventLabel(event.type)}
                     </span>
-                    <time className="text-board-subtle shrink-0" dateTime={event.createdAt}>
+                    <time
+                      className="text-board-subtle shrink-0 text-[10px]"
+                      dateTime={event.createdAt}
+                    >
                       {new Date(event.createdAt).toLocaleString(document.documentElement.lang, {
                         dateStyle: "short",
                         timeStyle: "short",
@@ -137,13 +140,13 @@ export const TaskEditorHistory = ({ events }: TaskEditorHistoryProps) => {
                   {changes.length > 0 ? (
                     <ul className="text-board-text space-y-1">
                       {changes.map((change, index) => (
-                        <li className="leading-5" key={`${event.id}-change-${index}`}>
+                        <li className="leading-4" key={`${event.id}-change-${index}`}>
                           {formatTrackerEventChange(change)}
                         </li>
                       ))}
                     </ul>
                   ) : (
-                    legacyText && <p className="text-board-text leading-5">{legacyText}</p>
+                    legacyText && <p className="text-board-text leading-4">{legacyText}</p>
                   )}
                 </div>
               );

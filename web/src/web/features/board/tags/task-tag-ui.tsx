@@ -15,6 +15,7 @@ const toneOptions: readonly {
 ];
 
 type TaskTagToneSwatchesProps = {
+  readonly compact?: boolean | undefined;
   readonly disabled?: boolean | undefined;
   readonly label: string;
   readonly onChange: (tone: TaskTagTone) => void;
@@ -22,24 +23,29 @@ type TaskTagToneSwatchesProps = {
 };
 
 export const TaskTagToneSwatches = ({
+  compact = false,
   disabled = false,
   label,
   onChange,
   value,
 }: TaskTagToneSwatchesProps) => (
-  <div aria-label={label} className="flex items-center gap-1.5" role="radiogroup">
+  <div
+    aria-label={label}
+    className={`flex items-center ${compact ? "gap-0.5" : "gap-1.5"}`}
+    role="radiogroup"
+  >
     {toneOptions.map((tone) => (
       <button
         aria-label={boardText(tone.label)}
         aria-checked={value === tone.value}
-        className={`focus-visible:ring-board-accent grid size-7 place-items-center rounded-full border-2 transition focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none ${value === tone.value ? "border-board-input-text" : "hover:border-board-border-hover border-transparent"}`}
+        className={`focus-visible:ring-board-accent grid place-items-center rounded-full border-2 transition focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none ${compact ? "size-6" : "size-7"} ${value === tone.value ? "border-board-input-text" : "hover:border-board-border-hover border-transparent"}`}
         disabled={disabled}
         key={tone.value}
         onClick={() => onChange(tone.value)}
         role="radio"
         type="button"
       >
-        <span className={`size-4 rounded-full ${tone.swatch}`} />
+        <span className={`${compact ? "size-3" : "size-4"} rounded-full ${tone.swatch}`} />
       </button>
     ))}
   </div>

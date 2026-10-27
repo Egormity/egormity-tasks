@@ -19,6 +19,7 @@ afterEach(() => {
 
 it.each([
   ["/#/users", "/users"],
+  ["/#/archive", "/archive"],
   ["/#/tasks", "/tasks"],
   ["/retired-page", "/tasks"],
   ["/", "/tasks"],
@@ -56,6 +57,14 @@ it("recognizes the users route and keeps it navigable with a real URL", () => {
   expect(readWorkspaceLocation()).toEqual({
     page: "users",
   });
+});
+
+it("recognizes the archive route and keeps it navigable with a real URL", () => {
+  history.replaceState(null, "", "/tasks");
+  render(<AppLink href="/archive">Archive</AppLink>);
+  fireEvent.click(screen.getByRole("link", { name: "Archive" }));
+  expect(workspaceHref()).toBe("/archive");
+  expect(readWorkspaceLocation()).toEqual({ page: "archive" });
 });
 
 it("converts legacy entries reached through browser history before notifying the UI", async () => {

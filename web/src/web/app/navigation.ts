@@ -1,5 +1,10 @@
 export const readWorkspaceLocation = () => ({
-  page: location.pathname === "/users" ? ("users" as const) : ("tasks" as const),
+  page:
+    location.pathname === "/users"
+      ? ("users" as const)
+      : location.pathname === "/archive"
+        ? ("archive" as const)
+        : ("tasks" as const),
 });
 
 export const workspaceHref = () => location.pathname + location.search;
@@ -14,11 +19,11 @@ export const navigate = (href: string, replace = false) => {
 /** Normalize bookmarks before the UI observes browser navigation. */
 export const initializeWorkspaceNavigation = () => {
   const normalize = () => {
-    if (/^#\/(?:tasks|users)(?:\?|$)/u.test(location.hash)) {
+    if (/^#\/(?:tasks|archive|users)(?:\?|$)/u.test(location.hash)) {
       history.replaceState(history.state, "", location.hash.slice(1));
       return true;
     }
-    if (!["/tasks", "/users"].includes(location.pathname))
+    if (!["/tasks", "/archive", "/users"].includes(location.pathname))
       history.replaceState(history.state, "", "/tasks");
     return false;
   };

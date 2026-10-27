@@ -21,8 +21,7 @@ import { useTaskEditor } from "@/features/board/editor/use-task-editor";
 
 const getStringData = (value: unknown) => (typeof value === "string" ? value : undefined);
 
-export const BoardPage = () => {
-  const [archived, setArchived] = useState(false);
+export const BoardPage = ({ archived }: { archived: boolean }) => {
   const [search, setSearch] = useState("");
   const [exportingColumnId, setExportingColumnId] = useState<TaskStatus | null>(null);
   const cardsQuery = useTrackerCards(archived ? "archived" : "active", search.trim());
@@ -89,17 +88,9 @@ export const BoardPage = () => {
 
   return (
     <TrackerShell
-      archived={archived}
-      onToggleArchive={() => setArchived((value) => !value)}
-      headerSummary={
-        <span className="text-board-summary whitespace-nowrap text-[14px] tabular-nums">
-          {tasks.length} {boardText("задач в проекте")}
-        </span>
-      }
-      onCreateTask={openCreate}
+      onCreateTask={archived ? undefined : openCreate}
       onSearchChange={setSearch}
       searchValue={search}
-      title={boardText(archived ? "Архив" : "Доска")}
     >
       {cardsQuery.isLoading && (
         <p className="text-board-summary py-6 text-center text-xs">

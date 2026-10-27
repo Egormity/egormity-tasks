@@ -12,6 +12,7 @@ export const ru: Copy = {
   signOut: "Выйти",
   loading: "Загрузка…",
   tasks: "Задачи",
+  archive: "Архив",
   users: "Пользователи",
   userManagementTitle: "Пользователи",
   userManagementDescription:

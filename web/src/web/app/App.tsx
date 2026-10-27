@@ -7,10 +7,13 @@ import { UsersPage } from "@/features/users/UsersPage";
 import { usePreferences } from "@/shared/i18n/preferences";
 import type { User } from "@contracts/auth.js";
 import { navigate, readWorkspaceLocation } from "./navigation";
-import { WorkspaceHeader } from "./WorkspaceHeader";
+import { WorkspaceNavigation } from "./WorkspaceNavigation";
+
+type WorkspacePage = "tasks" | "archive" | "users";
 
 const Workspace = ({ user, onLogout }: { user: User; onLogout: () => void }) => {
-  const [page, setPage] = useState(() => {
+  const { copy } = usePreferences();
+  const [page, setPage] = useState<WorkspacePage>(() => {
     const initial = readWorkspaceLocation().page;
     return initial === "users" && user.role !== "admin" ? "tasks" : initial;
   });
@@ -21,8 +24,7 @@ const Workspace = ({ user, onLogout }: { user: User; onLogout: () => void }) => 
         navigate("/tasks", true);
         return;
       }
-      const next = requested;
-      setPage(next);
+      setPage(requested);
     };
     window.addEventListener("popstate", change);
     change();
@@ -30,12 +32,17 @@ const Workspace = ({ user, onLogout }: { user: User; onLogout: () => void }) => 
   }, [user.role]);
   return (
     <div className="bg-canvas text-ink flex h-dvh min-w-0 flex-col overflow-hidden">
-      <WorkspaceHeader user={user} page={page} onLogout={onLogout} />
-      <main className="flex min-h-0 min-w-0 flex-1 flex-col">
-        {page === "tasks" ? (
-          <BoardWorkspace onSessionExpired={onLogout} />
-        ) : (
+      <WorkspaceNavigation user={user} page={page} onLogout={onLogout} />
+      <main
+        aria-label={
+          page === "users" ? copy.users : page === "archive" ? copy.archive : copy.tasks
+        }
+        className="flex min-h-0 min-w-0 flex-1 flex-col"
+      >
+        {page === "users" ? (
           <UsersPage currentUser={user} onSessionExpired={onLogout} />
+        ) : (
+          <BoardWorkspace archived={page === "archive"} onSessionExpired={onLogout} />
         )}
       </main>
     </div>

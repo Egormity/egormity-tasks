@@ -10,6 +10,7 @@ export const en = {
   signOut: "Sign out",
   loading: "Loading…",
   tasks: "Tasks",
+  archive: "Archive",
   users: "Users",
   userManagementTitle: "Users",
   userManagementDescription:

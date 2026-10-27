@@ -81,8 +81,8 @@ it("renders the localized board and users pages and persists preferences", async
   );
   await render();
   expect(host.querySelector('a[href="/tasks"]')?.textContent).toBe("Задачи");
-  expect(host.querySelectorAll("nav a")).toHaveLength(2);
-  expect(host.querySelector("h1")?.textContent).toBe("Доска");
+  expect(host.querySelectorAll("nav a")).toHaveLength(3);
+  expect(host.querySelector("main")?.getAttribute("aria-label")).toBe("Задачи");
   expect(paths).toContain("/api/board");
   const language = host.querySelectorAll("select")[0]!;
   const theme = host.querySelectorAll("select")[1]!;
@@ -94,7 +94,9 @@ it("renders the localized board and users pages and persists preferences", async
     theme.value = "dark";
     theme.dispatchEvent(new Event("change", { bubbles: true }));
   });
-  expect(host.querySelector("h1")?.textContent).toBe("Board");
+  expect(host.querySelector('a[href="/tasks"][aria-current="page"]')?.textContent).toBe(
+    "Tasks",
+  );
   expect(document.documentElement.lang).toBe("en");
   expect(document.documentElement.dataset.theme).toBe("dark");
   expect(JSON.parse(localStorage.getItem(policy.preferencesStorageKey)!)).toEqual({
@@ -108,6 +110,10 @@ it("renders the localized board and users pages and persists preferences", async
   expect(location.hash).toBe("");
   expect(host.querySelector('a[aria-current="page"]')?.textContent).toBe("Users");
   expect(host.querySelector("h1")?.textContent).toBe("Users");
+  await settle(() => host.querySelector<HTMLAnchorElement>('a[href="/archive"]')!.click());
+  expect(location.pathname).toBe("/archive");
+  expect(host.querySelector('a[aria-current="page"]')?.textContent).toBe("Archive");
+  expect(host.querySelector("main")?.getAttribute("aria-label")).toBe("Archive");
   await settle(() => root.unmount());
   root = createRoot(host);
   await render();
@@ -153,15 +159,23 @@ it("opens the direct users URL for admins and sends managers away from it", asyn
   expect(host.querySelector("h1")?.textContent).not.toBe("Users");
 });
 
+it("opens the archive as a separate direct page", async () => {
+  history.replaceState(null, "", "/archive");
+  await render();
+  expect(host.querySelector("main")?.getAttribute("aria-label")).toBe("Archive");
+  expect(host.querySelector('a[href="/archive"]')?.getAttribute("aria-current")).toBe("page");
+  expect(paths).toContain("/api/board");
+});
+
 it.each(["/agent", "/tasks?task=former-discussion&new=1"])(
   "shows the board for a retired workspace URL: %s",
   async (href) => {
     history.replaceState(null, "", href);
     await render();
-    expect(host.querySelector("h1")?.textContent).toBe("Board");
+    expect(host.querySelector("main")?.getAttribute("aria-label")).toBe("Tasks");
     expect(paths.every((path) => ["/api/session", "/api/board"].includes(path))).toBe(true);
     expect(
       Array.from(host.querySelectorAll("nav a"), (link) => link.getAttribute("href")),
-    ).toEqual(["/tasks", "/users"]);
+    ).toEqual(["/tasks", "/archive", "/users"]);
   },
 );

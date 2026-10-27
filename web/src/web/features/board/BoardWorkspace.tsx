@@ -11,7 +11,13 @@ import { resetTrackerState } from "@/features/board/data/tracker-api";
 import { createBoardQueryClient } from "@/features/board/data/tracker-query";
 import { useBoardEvents } from "@/features/board/data/use-board-events";
 
-export const BoardWorkspace = ({ onSessionExpired }: { onSessionExpired: () => void }) => {
+export const BoardWorkspace = ({
+  archived,
+  onSessionExpired,
+}: {
+  archived: boolean;
+  onSessionExpired: () => void;
+}) => {
   const { theme, locale } = usePreferences();
   const [client] = useState(() => {
     const onError = (error: Error) => {
@@ -34,7 +40,7 @@ export const BoardWorkspace = ({ onSessionExpired }: { onSessionExpired: () => v
   return (
     <QueryClientProvider client={client}>
       <div className="bg-board-canvas min-h-0 min-w-0 flex-1 overflow-auto" lang={locale}>
-        <BoardPage />
+        <BoardPage archived={archived} />
       </div>
       <Toaster theme={theme} richColors closeButton />
     </QueryClientProvider>

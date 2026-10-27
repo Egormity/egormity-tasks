@@ -26,7 +26,7 @@ export const AppLink = ({
       const url = new URL(href, location.href);
       if (
         url.origin !== location.origin ||
-        !["/tasks", "/users"].includes(url.pathname) ||
+        !["/tasks", "/archive", "/users"].includes(url.pathname) ||
         url.hash
       )
         return;
