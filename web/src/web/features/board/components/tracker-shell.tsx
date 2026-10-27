@@ -1,4 +1,4 @@
-import { Columns3, Search, SeparatorHorizontal } from "lucide-react";
+import { Columns3, Search } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { CreateTaskButton } from "./create-task-button";
@@ -8,7 +8,6 @@ type TrackerShellProps = {
   readonly children: ReactNode;
   readonly onCreateTask?: (() => void) | undefined;
   readonly onAddColumn?: (() => void) | undefined;
-  readonly onAddDivider?: (() => void) | undefined;
   readonly onSearchChange?: ((value: string) => void) | undefined;
   readonly searchValue?: string | undefined;
 };
@@ -17,7 +16,6 @@ export const TrackerShell = ({
   children,
   onCreateTask,
   onAddColumn,
-  onAddDivider,
   onSearchChange,
   searchValue = "",
 }: TrackerShellProps) => (
@@ -48,16 +46,6 @@ export const TrackerShell = ({
         >
           <Columns3 aria-hidden="true" className="size-3.5" />
           {boardText("Добавить колонку")}
-        </button>
-      )}
-      {onAddDivider && (
-        <button
-          className="border-board-button-border bg-board-surface text-board-button-text hover:bg-board-button-hover inline-flex h-7 items-center gap-1 rounded-sm border px-2 text-xs font-medium transition"
-          onClick={onAddDivider}
-          type="button"
-        >
-          <SeparatorHorizontal aria-hidden="true" className="size-3.5" />
-          {boardText("Добавить разделитель")}
         </button>
       )}
     </div>

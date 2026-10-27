@@ -167,7 +167,6 @@ export const BoardPage = ({ archived }: { archived: boolean }) => {
               setSettingsOpen(true);
             }
       }
-      onAddDivider={archived ? undefined : handleAddDivider}
       onSearchChange={setSearch}
       searchValue={search}
     >
@@ -201,10 +200,7 @@ export const BoardPage = ({ archived }: { archived: boolean }) => {
         </div>
       )}
       {!archived && !cardsQuery.isLoading && !cardsQuery.isError && (
-        <div
-          className="mx-auto w-max min-w-full"
-          style={{ minWidth: Math.max(1320, columns.length * 220) }}
-        >
+        <div className="mx-auto w-max min-w-full">
           <DragDropProvider
             onBeforeDragStart={handleBeforeDragStart}
             onCollision={handleCollision}
@@ -224,7 +220,10 @@ export const BoardPage = ({ archived }: { archived: boolean }) => {
               {columns.map((column) => {
                 const columnTasks = getOrderedColumnTasks(displayedTasks, column.id);
                 return (
-                  <div className="flex min-w-[220px] flex-1 flex-col" key={column.id}>
+                  <div
+                    className="flex w-[320px] min-w-[320px] flex-none flex-col"
+                    key={column.id}
+                  >
                     <BoardColumn
                       column={column}
                       onConfigure={() => {
@@ -281,6 +280,7 @@ export const BoardPage = ({ archived }: { archived: boolean }) => {
         onSave={handleSaveColumn}
         onMove={handleMoveColumn}
         onDelete={handleDeleteColumn}
+        onAddDivider={handleAddDivider}
         onExport={() => {
           if (!editingColumn) return;
           const columnTasks = getOrderedColumnTasks(

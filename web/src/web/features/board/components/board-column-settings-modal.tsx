@@ -1,4 +1,4 @@
-import { ArrowLeft, ArrowRight, Download, Trash2, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, Download, SeparatorHorizontal, Trash2, X } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import type { BoardColumn } from "@/features/board/data/task-data";
@@ -19,6 +19,7 @@ type BoardColumnSettingsModalProps = {
   readonly onMove: (offset: -1 | 1) => void;
   readonly onDelete: () => void;
   readonly onExport: () => void;
+  readonly onAddDivider: () => void;
 };
 
 export const BoardColumnSettingsModal = ({
@@ -34,6 +35,7 @@ export const BoardColumnSettingsModal = ({
   onMove,
   onDelete,
   onExport,
+  onAddDivider,
 }: BoardColumnSettingsModalProps) => {
   const [label, setLabel] = useState("");
   const [accent, setAccent] = useState("#b9bfca");
@@ -129,7 +131,7 @@ export const BoardColumnSettingsModal = ({
           </div>
 
           {column && (
-            <div className="flex items-center justify-between gap-2">
+            <div className="flex flex-wrap items-center justify-between gap-2">
               <button
                 className="border-board-button-border bg-board-surface text-board-button-text hover:bg-board-button-hover inline-flex h-7 items-center gap-1.5 rounded-md border px-2 text-[11px] font-medium disabled:opacity-40"
                 disabled={busy || exporting || taskCount === 0}
@@ -141,6 +143,16 @@ export const BoardColumnSettingsModal = ({
                   exporting ? "Подготовка архива…" : "Скачать задачи колонки ({0})",
                   taskCount,
                 )}
+              </button>
+
+              <button
+                className="border-board-button-border bg-board-surface text-board-button-text hover:bg-board-button-hover inline-flex h-7 items-center gap-1.5 rounded-md border px-2 text-[11px] font-medium disabled:opacity-40"
+                disabled={busy}
+                onClick={onAddDivider}
+                type="button"
+              >
+                <SeparatorHorizontal aria-hidden="true" className="size-3.5" />
+                {boardText("Добавить разделитель")}
               </button>
 
               <button
