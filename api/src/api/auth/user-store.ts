@@ -169,6 +169,21 @@ export class UserStore {
     }
     return user;
   };
+
+  remove = (id: string, actorId: string): User => {
+    const current = this.findById(id);
+    if (!current) throw new HttpError(404, "User not found.");
+    if (actorId === id) throw new HttpError(409, "You cannot delete your own account.");
+    if (current.role === "admin") {
+      const admins = this.db
+        .prepare("SELECT COUNT(*) AS count FROM app_users WHERE role = 'admin'")
+        .get() as { count: number };
+      if (admins.count <= 1)
+        throw new HttpError(409, "At least one admin account must remain.");
+    }
+    this.db.prepare("DELETE FROM app_users WHERE id = ?").run(id);
+    return { id: current.id, username: current.username, role: current.role };
+  };
 }
 
 const isUsernameConflict = (error: unknown) =>

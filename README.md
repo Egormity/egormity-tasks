@@ -12,7 +12,8 @@ Egormity Tasks has two independent Amazi applications: `web/` provides the brows
 
 The API authenticates local administrator and manager accounts. The initial administrator is configured
 with API-only environment values. Passwords use scrypt verifiers; successful sign-in issues an HttpOnly,
-SameSite=Strict signed session cookie. Administrators can manage accounts; both roles use the task board.
+SameSite=Strict signed session cookie. Administrators can manage accounts, including deleting them,
+but never their own account or the last remaining administrator. Both roles use the task board.
 Keep plaintext passwords and session secrets out of source files.
 
 ## Data

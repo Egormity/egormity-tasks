@@ -37,6 +37,12 @@ export const en = {
   cancel: "Cancel",
   close: "Close",
   edit: "Edit",
+  delete: "Delete",
+  deleting: "Deleting…",
+  deleteUserTitle: "Delete user",
+  deleteUserDescription:
+    "Permanently delete “{username}”? The account is signed out immediately and loses access to the workspace.",
+  deleteOwnAccount: "You cannot delete your own account.",
 } as const;
 
 export type Copy = { [Key in keyof typeof en]: string };

@@ -12,3 +12,6 @@ export const createUser = (input: UserInput & { password: string }) =>
 
 export const updateUser = (id: string, input: UserInput) =>
   request<User>(`/users/${encodeURIComponent(id)}`, input);
+
+export const deleteUser = (id: string) =>
+  request<User>(`/users/${encodeURIComponent(id)}/remove`, {});

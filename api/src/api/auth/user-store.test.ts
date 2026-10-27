@@ -3,6 +3,16 @@ import { expect, it } from "vitest";
 
 import { hashPassword, UserStore } from "./user-store.js";
 
+const createStore = () => {
+  const db = new DatabaseSync(":memory:");
+  const store = new UserStore(
+    db,
+    { id: "00000000-0000-5000-8000-000000000001", username: "admin", role: "admin" },
+    hashPassword("bootstrap-password"),
+  );
+  return { db, store };
+};
+
 it("adds username to legacy account tables without losing sign-in details", () => {
   const db = new DatabaseSync(":memory:");
   db.exec(`
@@ -41,5 +51,41 @@ it("adds username to legacy account tables without losing sign-in details", () =
   });
   expect(store.list().map(({ username }) => username)).toEqual(["admin", "old@example.test"]);
   expect(store.list()[0]).not.toHaveProperty("passwordHash");
+  db.close();
+});
+
+it("removes an account and reports it as missing afterwards", () => {
+  const { db, store } = createStore();
+  const manager = store.create({
+    username: "manager",
+    role: "manager",
+    password: "manager-password",
+  });
+
+  expect(store.remove(manager.id, "00000000-0000-5000-8000-000000000001")).toEqual(manager);
+  expect(store.findById(manager.id)).toBeNull();
+  expect(store.list().map(({ username }) => username)).toEqual(["admin"]);
+  db.close();
+});
+
+it("refuses to remove the signed-in account, the last admin, or an unknown account", () => {
+  const { db, store } = createStore();
+  const adminId = "00000000-0000-5000-8000-000000000001";
+  const manager = store.create({
+    username: "manager",
+    role: "manager",
+    password: "manager-password",
+  });
+
+  expect(() => store.remove(adminId, adminId)).toThrowError(
+    "You cannot delete your own account.",
+  );
+  expect(() => store.remove(adminId, manager.id)).toThrowError(
+    "At least one admin account must remain.",
+  );
+  expect(() => store.remove("11111111-1111-4111-8111-111111111111", adminId)).toThrowError(
+    "User not found.",
+  );
+  expect(store.list()).toHaveLength(2);
   db.close();
 });

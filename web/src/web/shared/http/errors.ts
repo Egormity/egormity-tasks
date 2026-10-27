@@ -24,6 +24,12 @@ const translations: Record<string, string> = {
   "Choose a non-empty file.": "Выберите непустой файл.",
   "Invalid file name.": "Некорректное имя файла.",
   "Attachment file is unavailable.": "Файл вложения недоступен.",
+  "User not found.": "Пользователь не найден.",
+  "Invalid user data.": "Проверьте данные пользователя.",
+  "You cannot change your own role.": "Нельзя изменить свою роль.",
+  "You cannot delete your own account.": "Нельзя удалить свою учётную запись.",
+  "At least one admin account must remain.": "Должен остаться хотя бы один администратор.",
+  "A user with this username already exists.": "Пользователь с таким именем уже существует.",
 };
 
 export const localizeError = (message: string, locale: "en" | "ru") =>

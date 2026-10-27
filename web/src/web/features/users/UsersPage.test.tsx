@@ -36,6 +36,13 @@ beforeEach(() => {
         users = [...users, created];
         return Promise.resolve(Response.json(created, { status: 201 }));
       }
+      const remove = /^\/api\/users\/([^/]+)\/remove$/u.exec(url);
+      if (remove?.[1] && init?.method === "POST") {
+        const id = remove[1];
+        const removed = users.find((user) => user.id === id) ?? null;
+        users = users.filter((user) => user.id !== id);
+        return Promise.resolve(Response.json(removed));
+      }
       if (url.startsWith("/api/users/") && init?.method === "POST" && body) {
         const id = url.slice("/api/users/".length);
         const updated = { ...body, id };
@@ -53,14 +60,16 @@ afterEach(() => {
   localStorage.clear();
 });
 
-it("lists accounts and creates and edits users through the modal", async () => {
+it("lists accounts and creates, edits, and deletes users through the modals", async () => {
   render(
     <PreferencesProvider>
       <UsersPage currentUser={admin} onSessionExpired={vi.fn()} />
     </PreferencesProvider>,
   );
 
-  expect(await screen.findByText("admin")).toBeTruthy();
+  const adminRow = await screen.findByRole("row", { name: /admin/u });
+  const ownDelete = within(adminRow).getByRole<HTMLButtonElement>("button", { name: "Delete" });
+  expect(ownDelete.disabled).toBe(true);
   fireEvent.click(screen.getByRole("button", { name: "Add user" }));
   fireEvent.change(screen.getByLabelText("Username"), {
     target: { value: "team-manager" },
@@ -80,4 +89,13 @@ it("lists accounts and creates and edits users through the modal", async () => {
 
   await waitFor(() => expect(screen.getByText("project-manager")).toBeTruthy());
   expect(users.find((user) => user.username === "project-manager")?.role).toBe("admin");
+
+  const editedRow = screen.getByRole("row", { name: /project-manager/u });
+  fireEvent.click(within(editedRow).getByRole("button", { name: "Delete" }));
+  const confirmation = await screen.findByRole("dialog");
+  expect(within(confirmation).getByText(/project-manager/u)).toBeTruthy();
+  fireEvent.click(within(confirmation).getByRole("button", { name: "Delete" }));
+
+  await waitFor(() => expect(screen.queryByText("project-manager")).toBeNull());
+  expect(users.map((user) => user.username)).toEqual(["admin"]);
 });

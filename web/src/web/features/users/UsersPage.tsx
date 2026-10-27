@@ -2,8 +2,9 @@ import { useEffect, useState } from "react";
 
 import { usePreferences } from "@/shared/i18n/preferences";
 import type { User } from "@contracts/auth.js";
+import { DeleteUserDialog } from "./DeleteUserDialog";
 import { UserEditorDialog } from "./UserEditorDialog";
-import { createUser, getUsers, updateUser, type UserInput } from "./users-api";
+import { createUser, deleteUser, getUsers, updateUser, type UserInput } from "./users-api";
 
 type EditorState = { user: User | null };
 
@@ -21,6 +22,9 @@ export const UsersPage = ({
   const [editor, setEditor] = useState<EditorState | null>(null);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
+  const [removing, setRemoving] = useState<User | null>(null);
+  const [removingPending, setRemovingPending] = useState(false);
+  const [removeError, setRemoveError] = useState("");
 
   const loadUsers = async () => {
     setLoading(true);
@@ -70,6 +74,27 @@ export const UsersPage = ({
   const openEditor = (user: User | null) => {
     setSaveError("");
     setEditor({ user });
+  };
+
+  const confirmRemove = async () => {
+    if (!removing) return;
+    setRemovingPending(true);
+    setRemoveError("");
+    try {
+      const removed = await deleteUser(removing.id);
+      setUsers((current) => current.filter((item) => item.id !== removed.id));
+      setRemoving(null);
+      if (removed.id === currentUser.id) onSessionExpired();
+    } catch (error) {
+      setRemoveError(errorText(error instanceof Error ? error.message : String(error)));
+    } finally {
+      setRemovingPending(false);
+    }
+  };
+
+  const openRemove = (user: User) => {
+    setRemoveError("");
+    setRemoving(user);
   };
 
   return (
@@ -135,14 +160,27 @@ export const UsersPage = ({
                           {user.role === "admin" ? copy.adminRole : copy.managerRole}
                         </span>
                       </td>
-                      <td className="px-3 py-2 text-right">
-                        <button
-                          className="text-accent font-medium underline underline-offset-4"
-                          onClick={() => openEditor(user)}
-                          type="button"
-                        >
-                          {copy.edit}
-                        </button>
+                      <td className="px-3 py-2">
+                        <div className="flex justify-end gap-3">
+                          <button
+                            className="text-accent font-medium underline underline-offset-4"
+                            onClick={() => openEditor(user)}
+                            type="button"
+                          >
+                            {copy.edit}
+                          </button>
+                          <button
+                            className="text-danger font-medium underline underline-offset-4 disabled:opacity-50"
+                            disabled={user.id === currentUser.id}
+                            onClick={() => openRemove(user)}
+                            title={
+                              user.id === currentUser.id ? copy.deleteOwnAccount : undefined
+                            }
+                            type="button"
+                          >
+                            {copy.delete}
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -160,6 +198,16 @@ export const UsersPage = ({
           onSave={(input) => void save(input)}
           pending={saving}
           user={editor.user}
+        />
+      )}
+
+      {removing && (
+        <DeleteUserDialog
+          error={removeError}
+          onClose={() => setRemoving(null)}
+          onConfirm={() => void confirmRemove()}
+          pending={removingPending}
+          user={removing}
         />
       )}
     </section>

@@ -39,4 +39,10 @@ export const ru: Copy = {
   cancel: "Отмена",
   close: "Закрыть",
   edit: "Изменить",
+  delete: "Удалить",
+  deleting: "Удаление…",
+  deleteUserTitle: "Удалить пользователя",
+  deleteUserDescription:
+    "Удалить «{username}» без возможности восстановления? Учётная запись сразу потеряет доступ к рабочему пространству.",
+  deleteOwnAccount: "Нельзя удалить свою учётную запись.",
 };

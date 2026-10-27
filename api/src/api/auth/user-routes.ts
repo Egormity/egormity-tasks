@@ -21,6 +21,10 @@ export const userRoutes = (users: UserStore) => {
   router.post("/", (request, response) =>
     response.status(201).json(users.create(parse(createUserRequestSchema, request.body))),
   );
+  router.post("/:id/remove", (request, response) => {
+    const actor = response.locals.user as User;
+    response.json(users.remove(request.params.id, actor.id));
+  });
   router.post("/:id", (request, response) => {
     const actor = response.locals.user as User;
     response.json(

@@ -131,6 +131,9 @@ it("creates and edits users, applies roles to sign-in, and restricts user manage
     .slice(policy.cookieName.length + 1);
   expect((await call("/session", undefined, true, undefined, managerToken)).status).toBe(200);
   expect((await call("/users", undefined, true, undefined, managerToken)).status).toBe(403);
+  expect(
+    (await call(`/users/${created.id}/remove`, {}, true, undefined, managerToken)).status,
+  ).toBe(403);
   expect((await call("/board", undefined, true, undefined, managerToken)).status).toBe(200);
 
   const adminRoleChange = await call(`/users/${created.id}`, {
@@ -156,6 +159,18 @@ it("creates and edits users, applies roles to sign-in, and restricts user manage
   );
   expect(updatedLogin.status).toBe(200);
   expect(await updatedLogin.json()).toMatchObject({ username: "Team Admin", role: "admin" });
+
+  const selfDelete = await call(`/users/${listedUsers[0]!.id}/remove`, {});
+  expect(selfDelete.status).toBe(409);
+
+  const removedResponse = await call(`/users/${created.id}/remove`, {});
+  expect(removedResponse.status).toBe(200);
+  expect(await removedResponse.json()).toMatchObject({
+    id: created.id,
+    username: "Team Admin",
+  });
+  const remainingUsers = (await (await call("/users")).json()) as Array<{ username: string }>;
+  expect(remainingUsers.map(({ username }) => username)).toEqual(["admin@example"]);
 });
 
 it("uses an HttpOnly secure cookie and rejects cross-origin mutations", async () => {
