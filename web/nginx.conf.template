@@ -30,6 +30,19 @@ http {
     add_header Referrer-Policy no-referrer always;
     add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'" always;
     location = /health { return 200 'ok'; }
+    # The app shell must be revalidated on every load. Otherwise a browser can
+    # reuse a cached document whose hashed bundles were removed by a newer
+    # deployment, which renders a blank page.
+    location = /index.html {
+      expires -1;
+    }
+    # Content-hashed bundles are safe to cache forever, and a bundle missing
+    # from the image must answer 404 instead of the HTML app-shell fallback
+    # (HTML served for a module script breaks the whole app).
+    location /assets/ {
+      try_files $uri =404;
+      expires max;
+    }
     location /api/ {
       proxy_pass ${OPERATIONS_AGENT_PRODUCTION_API_TARGET};
       proxy_ssl_server_name on;
