@@ -4,7 +4,7 @@ import { trackerBoardQuery } from "../data/tracker-query";
 import { toTrackerTask } from "../data/tracker-api";
 import { toast } from "sonner";
 import { ConfirmModal } from "@/features/board/components/confirm-modal";
-import type { Task } from "@/features/board/data/task-data";
+import { boardColumns, type Task } from "@/features/board/data/task-data";
 import { TaskEditorModal, type TaskEditorValues } from "./task-editor-modal";
 import { downloadTaskExportArchive } from "@/features/board/data/task-export";
 import type { TrackerTag, TrackerTagUpdate } from "@/features/board/data/tracker-api";
@@ -153,6 +153,7 @@ export const useTaskEditor = (exportBlocked = false) => {
           attachments: values.attachments,
           description: values.description,
           priority: "medium",
+          status: values.status,
           tagIds: values.tagIds,
           title: values.title,
         });
@@ -162,7 +163,10 @@ export const useTaskEditor = (exportBlocked = false) => {
       }
       try {
         await uploadAttachments(created.id);
-        toast.success(boardText("Задача добавлена в «Бэк лог»"));
+        const column = boardColumns.find(({ id }) => id === values.status);
+        toast.success(
+          boardText("Задача добавлена в «{0}»", boardText(column?.label ?? "Бэк лог")),
+        );
         setEditor(null);
       } catch {
         toast.error(boardText("Задача создана, но не удалось сохранить вложение"));

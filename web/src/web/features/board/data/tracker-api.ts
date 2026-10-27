@@ -31,6 +31,7 @@ export type CardInput = {
   readonly attachments: readonly TaskAttachment[];
   readonly description: string;
   readonly priority?: TaskPriority | undefined;
+  readonly status: TaskStatus;
   readonly tagIds: readonly string[];
   readonly title: string;
 };
@@ -114,7 +115,7 @@ export const createTrackerCard = async (input: CardInput) =>
       title: input.title,
       description: input.description || null,
       priority: input.priority ?? policy.defaultTaskPriority,
-      status: policy.defaultTaskStatus,
+      status: input.status,
       tagIds: input.tagIds,
     }),
   );

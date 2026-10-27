@@ -108,16 +108,17 @@ export class BoardStore {
     this.transaction(() => {
       this.validateTags(input.tagIds);
       const now = new Date().toISOString();
+      const column = this.cards().filter(
+        (card) => card.status === input.status && !card.archivedAt,
+      );
+      column.forEach((card, index) => {
+        const order = index + 1;
+        if (card.order !== order) this.save({ ...card, order, revision: card.revision + 1 });
+      });
       const card: Task = {
         ...input,
         id: randomUUID(),
-        order:
-          Math.max(
-            -1,
-            ...this.cards()
-              .filter((c) => c.status === input.status && !c.archivedAt)
-              .map((c) => c.order),
-          ) + 1,
+        order: 0,
         archivedAt: null,
         createdAt: now,
         updatedAt: now,

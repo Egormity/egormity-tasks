@@ -15,11 +15,13 @@ import {
   createTaskAttachments,
   getClipboardFiles,
 } from "@/features/board/attachments/task-attachment-utils";
-import type {
-  Task,
-  TaskAttachment,
-  TaskTagTone,
-  TrackerEvent,
+import {
+  boardColumns,
+  type Task,
+  type TaskAttachment,
+  type TaskStatus,
+  type TaskTagTone,
+  type TrackerEvent,
 } from "@/features/board/data/task-data";
 import { TaskDescriptionEditor } from "./task-description-editor";
 import {
@@ -38,6 +40,7 @@ export type TaskEditorValues = {
   readonly attachmentFiles: ReadonlyMap<string, File>;
   readonly attachments: readonly TaskAttachment[];
   readonly description: string;
+  readonly status: TaskStatus;
   readonly tagIds: readonly string[];
   readonly title: string;
 };
@@ -100,6 +103,9 @@ export const TaskEditorModal = ({
   const [selectedTagIds, setSelectedTagIds] = useState<readonly string[]>(
     task?.tags?.map((tag) => tag.id) ?? [],
   );
+  const [status, setStatus] = useState<TaskStatus>(
+    task?.status && task.status !== "archived" ? task.status : "backlog",
+  );
   const appliedTagIds = selectedTagIds.filter((id) => tags.some((tag) => tag.id === id));
   const handleAddFiles = useCallback((files: readonly File[]) => {
     const nextAttachments = createTaskAttachments(files);
@@ -155,6 +161,7 @@ export const TaskEditorModal = ({
       attachmentFiles,
       attachments,
       description: description.trim().slice(0, 8000),
+      status,
       tagIds: appliedTagIds,
       title: normalizedTitle,
     });
@@ -295,6 +302,29 @@ export const TaskEditorModal = ({
                           <p className="text-board-rose mt-1.5 text-xs">{titleError}</p>
                         )}
                       </div>
+
+                      {mode === "create" && (
+                        <div>
+                          <label
+                            className="text-board-text text-xs font-medium"
+                            htmlFor="task-status"
+                          >
+                            {boardText("Колонка")}
+                          </label>
+                          <select
+                            className="border-board-input-border bg-board-input-surface text-board-input-text focus:border-board-accent focus:ring-board-accent/15 mt-1.5 h-8 w-full rounded-md border px-2.5 text-xs transition outline-none focus:ring-2"
+                            id="task-status"
+                            onChange={(event) => setStatus(event.target.value as TaskStatus)}
+                            value={status}
+                          >
+                            {boardColumns.map((column) => (
+                              <option key={column.id} value={column.id}>
+                                {boardText(column.label)}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      )}
 
                       <TaskEditorAttachments
                         attachments={attachments}

@@ -43,6 +43,8 @@ Comments in `comments/TaskComments.tsx` also use task ID/revision and retain the
 updates. The task view shows comments with preview/download attachments; multipart writes commit
 text and files together and retain the draft after failure. Exports include comments and their files.
 The clarification/design column uses the shared status contract between Backlog and Queue.
+New tasks can be assigned to any board column (Backlog by default) and are inserted at the top of
+that column. The English board label for the clarification/design column is “Design required.”
 Attachment bytes and parsed text are cached by file identity/content hash, without timers or broad invalidation.
 Opening the full preview reuses the thumbnail's bytes. Failed/rolled-back writes never notify.
 

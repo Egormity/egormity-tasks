@@ -194,6 +194,12 @@ it("protects the board, preserves ordering and rejects stale edits", async () =>
   const second = (await (
     await call("/board/cards", { ...input, title: "Second task" })
   ).json()) as Task;
+  expect(second).toMatchObject({ status: "queue", order: 0 });
+  const creationSnapshot = (await (await call("/board")).json()) as BoardSnapshot;
+  expect(creationSnapshot.cards.map(({ id, order }) => ({ id, order }))).toEqual([
+    { id: second.id, order: 0 },
+    { id: first.id, order: 1 },
+  ]);
   expect(
     (await call(`/board/cards/${second.id}`, { revision: second.revision, beforeId: first.id }))
       .status,

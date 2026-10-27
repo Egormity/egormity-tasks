@@ -73,3 +73,33 @@ it("keeps the original separate read and edit views, saving title and descriptio
   );
   client.clear();
 });
+
+it("defaults new tasks to Backlog and saves the selected column", () => {
+  document.documentElement.lang = "en";
+  const onSave = vi.fn();
+  const client = new QueryClient();
+  render(
+    <QueryClientProvider client={client}>
+      <TaskEditorModal
+        events={[]}
+        mode="create"
+        onOpenChange={vi.fn()}
+        onCreateTag={vi.fn()}
+        onDeleteTag={vi.fn()}
+        onUpdateTag={vi.fn()}
+        onSave={onSave}
+        open
+        tags={[]}
+      />
+    </QueryClientProvider>,
+  );
+
+  const status = screen.getByRole("combobox", { name: "Column" });
+  expect(status).toHaveProperty("value", "backlog");
+  fireEvent.change(status, { target: { value: "review" } });
+  fireEvent.change(screen.getByLabelText(/Title/), { target: { value: "New task" } });
+  fireEvent.click(screen.getByRole("button", { name: "Create task" }));
+
+  expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ status: "review" }));
+  client.clear();
+});

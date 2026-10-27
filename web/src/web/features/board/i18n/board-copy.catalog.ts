@@ -1,5 +1,5 @@
 export const boardEnglish: Readonly<Record<string, string>> = {
-  "Нужно уточнение / дизайн": "Needs clarification / design",
+  "Нужно уточнение / дизайн": "Design required",
   Комментарии: "Comments",
   Комментарий: "Comment",
   "Напишите комментарий…": "Write a comment…",
@@ -32,6 +32,7 @@ export const boardEnglish: Readonly<Record<string, string>> = {
   "Задача сохранена, но не удалось сохранить вложение":
     "Task saved, but an attachment could not be uploaded",
   "Не удалось создать задачу": "Could not create the task",
+  "Задача добавлена в «{0}»": "Task added to “{0}”",
   "Задача добавлена в «Очередь»": "Task added to “Queue”",
   "Задача создана, но не удалось сохранить вложение":
     "Task created, but an attachment could not be uploaded",
@@ -187,6 +188,7 @@ export const boardEnglish: Readonly<Record<string, string>> = {
   "Поиск задач": "Search tasks",
   "Поиск задач...": "Search tasks…",
   Архив: "Archive",
+  Колонка: "Column",
   "Бэк лог": "Backlog",
   Очередь: "Queue",
   "Готово к публикации": "Ready to publish",
