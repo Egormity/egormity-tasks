@@ -1,18 +1,22 @@
 import { z } from "zod";
 
-import { taskStatuses } from "./board-columns.js";
+import type { BoardColumn, BoardDivider } from "./board-columns.js";
 
-export { boardColumns, taskStatuses } from "./board-columns.js";
-export type { BoardColumn, TaskStatus } from "./board-columns.js";
+export { boardColumns } from "./board-columns.js";
+export type { BoardColumn, BoardDivider, TaskStatus } from "./board-columns.js";
 
 export const tagTones = ["violet", "green", "amber", "blue", "rose"] as const;
+export const tagToneSchema = z.union([
+  z.enum(tagTones),
+  z.string().regex(/^#[0-9a-fA-F]{6}$/u),
+]);
 
 const id = z.string().min(1).max(160);
 
 export const tagInputSchema = z
   .object({
     name: z.string().trim().min(1).max(80),
-    tone: z.enum(tagTones),
+    tone: tagToneSchema,
   })
   .strict();
 
@@ -37,7 +41,7 @@ export const taskInputSchema = z
     title: z.string().trim().min(1).max(200),
     description: z.string().max(8000).nullable(),
     priority: z.enum(["low", "medium", "high"]),
-    status: z.enum(taskStatuses),
+    status: z.string().trim().min(1).max(160),
     tagIds: z.array(id).max(30),
   })
   .strict();
@@ -106,7 +110,12 @@ export type TaskAttachment = z.infer<typeof attachmentSchema>;
 
 export type BoardImport = z.infer<typeof boardImportSchema>;
 
-export type BoardSnapshot = { cards: Task[]; tags: TaskTag[] };
+export type BoardSnapshot = {
+  cards: Task[];
+  tags: TaskTag[];
+  columns?: BoardColumn[];
+  dividers?: BoardDivider[];
+};
 
 export const boardChangeSchema = z.object({ version: z.string().uuid() });
 

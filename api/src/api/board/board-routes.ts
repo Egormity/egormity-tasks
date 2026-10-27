@@ -9,6 +9,7 @@ import {
   taskInputSchema,
   taskUpdateSchema,
 } from "../contracts/board.js";
+import { boardColumnSchema } from "../contracts/board-columns.js";
 
 import { HttpError } from "../auth/auth.js";
 import type { BoardStore } from "./board-store.js";
@@ -29,9 +30,39 @@ export const boardRoutes = (store: BoardStore, events: BoardEvents) => {
     events.changed();
     return result;
   };
+  const columnInputSchema = z
+    .object({
+      label: z.string().trim().min(1).max(80),
+      accent: boardColumnSchema.shape.accent,
+    })
+    .strict();
   router.get("/events", events.subscribe);
   router.get("/", (_request, response) =>
     response.json({ ...store.snapshot(), version: events.version }),
+  );
+  router.post("/columns", (request, response) => {
+    const input = parse(columnInputSchema, request.body);
+    response.status(201).json(changed(store.createColumn(input)));
+  });
+  router.post("/columns/order", (request, response) => {
+    const { ids } = parse(
+      z.object({ ids: z.array(z.string().min(1).max(160)) }).strict(),
+      request.body,
+    );
+    response.json(changed(store.reorderColumns(ids)));
+  });
+  router.post("/columns/:id", (request, response) => {
+    const input = parse(columnInputSchema, request.body);
+    response.json(changed(store.updateColumn(request.params.id, input)));
+  });
+  router.post("/columns/:id/remove", (request, response) =>
+    response.json(changed(store.deleteColumn(request.params.id))),
+  );
+  router.post("/dividers", (_request, response) =>
+    response.status(201).json(changed(store.addDivider())),
+  );
+  router.post("/dividers/:id/remove", (request, response) =>
+    response.json(changed(store.deleteDivider(request.params.id))),
   );
   router.post("/cards", (request, response) =>
     response

@@ -1,7 +1,6 @@
-/**
- * Web's local contract copy mirrors api/src/api/contracts/board-columns.ts.
- * Task status values are stored as strings, so updating this array needs no DB migration.
- */
+import { z } from "zod";
+
+/** Keep the defaults in sync with api/src/api/contracts/board-columns.ts. */
 export const boardColumns = [
   { id: "backlog", label: "Бэк лог", accent: "var(--color-board-backlog)" },
   {
@@ -15,7 +14,24 @@ export const boardColumns = [
   { id: "done", label: "Готово", accent: "var(--color-board-done)" },
 ] as const;
 
-export type BoardColumn = (typeof boardColumns)[number];
-export type TaskStatus = BoardColumn["id"];
+export const boardColumnSchema = z
+  .object({
+    id: z.string().regex(/^[a-zA-Z][a-zA-Z0-9_-]{0,79}$/u),
+    label: z.string().trim().min(1).max(80),
+    accent: z.string().regex(/^(?:#[0-9a-fA-F]{6}|var\(--color-board-[a-z-]+\))$/u),
+  })
+  .strict();
+
+export const boardColumnsSchema = z
+  .array(boardColumnSchema)
+  .min(1)
+  .max(20)
+  .refine((columns) => new Set(columns.map(({ id }) => id)).size === columns.length);
+
+export const boardDividerSchema = z.object({ id: z.string().min(1).max(160) }).strict();
+
+export type BoardColumn = z.infer<typeof boardColumnSchema>;
+export type TaskStatus = string;
+export type BoardDivider = z.infer<typeof boardDividerSchema>;
 
 export const taskStatuses = boardColumns.map(({ id }) => id) as [TaskStatus, ...TaskStatus[]];

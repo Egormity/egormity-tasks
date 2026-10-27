@@ -1,7 +1,11 @@
 import { ChevronDown, History } from "lucide-react";
 import { useState } from "react";
 
-import type { TrackerEvent, TrackerEventChange } from "@/features/board/data/task-data";
+import type {
+  BoardColumn,
+  TrackerEvent,
+  TrackerEventChange,
+} from "@/features/board/data/task-data";
 
 import { boardText } from "@/features/board/i18n/board-copy";
 import {
@@ -11,6 +15,7 @@ import {
 } from "./task-editor-history-format";
 
 type TaskEditorHistoryProps = {
+  readonly columns: readonly BoardColumn[];
   readonly events: readonly TrackerEvent[];
 };
 
@@ -49,14 +54,14 @@ const getEventLabel = (type: TrackerEvent["type"]) => {
   return boardText("Событие");
 };
 
-const getLegacyEventText = (event: TrackerEvent) => {
+const getLegacyEventText = (event: TrackerEvent, columns: readonly BoardColumn[]) => {
   const from = event.payload.from;
   const to = event.payload.to;
   if (event.type === "status_changed" && typeof from === "string" && typeof to === "string") {
     return boardText(
       "Статус изменён с «{0}» на «{1}»",
-      getTrackerStatusLabel(from),
-      getTrackerStatusLabel(to),
+      getTrackerStatusLabel(from, undefined, columns),
+      getTrackerStatusLabel(to, undefined, columns),
     );
   }
 
@@ -70,7 +75,7 @@ const getLegacyEventText = (event: TrackerEvent) => {
   return null;
 };
 
-export const TaskEditorHistory = ({ events }: TaskEditorHistoryProps) => {
+export const TaskEditorHistory = ({ events, columns }: TaskEditorHistoryProps) => {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
@@ -117,7 +122,7 @@ export const TaskEditorHistory = ({ events }: TaskEditorHistoryProps) => {
           {events.length > 0 ? (
             events.map((event) => {
               const changes = getEventChanges(event);
-              const legacyText = getLegacyEventText(event);
+              const legacyText = getLegacyEventText(event, columns);
               return (
                 <div
                   className="bg-board-surface/70 space-y-1 rounded-md p-2 text-[11px]"
@@ -141,7 +146,7 @@ export const TaskEditorHistory = ({ events }: TaskEditorHistoryProps) => {
                     <ul className="text-board-text space-y-1">
                       {changes.map((change, index) => (
                         <li className="leading-4" key={`${event.id}-change-${index}`}>
-                          {formatTrackerEventChange(change)}
+                          {formatTrackerEventChange(change, columns)}
                         </li>
                       ))}
                     </ul>

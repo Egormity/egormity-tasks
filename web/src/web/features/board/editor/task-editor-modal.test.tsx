@@ -3,7 +3,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 
-import type { Task } from "@/features/board/data/task-data";
+import type { BoardColumn, Task } from "@/features/board/data/task-data";
 import { TaskEditorModal } from "./task-editor-modal";
 
 const task: Task = {
@@ -78,9 +78,14 @@ it("defaults new tasks to Backlog and saves the selected column", () => {
   document.documentElement.lang = "en";
   const onSave = vi.fn();
   const client = new QueryClient();
+  const columns: readonly BoardColumn[] = [
+    { id: "backlog", label: "Backlog", accent: "#b9bfca" },
+    { id: "customStage", label: "Custom stage", accent: "#123456" },
+  ];
   render(
     <QueryClientProvider client={client}>
       <TaskEditorModal
+        columns={columns}
         events={[]}
         mode="create"
         onOpenChange={vi.fn()}
@@ -96,10 +101,10 @@ it("defaults new tasks to Backlog and saves the selected column", () => {
 
   const status = screen.getByRole("combobox", { name: "Column" });
   expect(status).toHaveProperty("value", "backlog");
-  fireEvent.change(status, { target: { value: "review" } });
+  fireEvent.change(status, { target: { value: "customStage" } });
   fireEvent.change(screen.getByLabelText(/Title/), { target: { value: "New task" } });
   fireEvent.click(screen.getByRole("button", { name: "Create task" }));
 
-  expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ status: "review" }));
+  expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ status: "customStage" }));
   client.clear();
 });

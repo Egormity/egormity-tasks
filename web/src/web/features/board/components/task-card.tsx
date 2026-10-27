@@ -5,7 +5,10 @@ import type { KeyboardEvent, MouseEvent, RefCallback } from "react";
 import type { Task } from "@/features/board/data/task-data";
 
 import { boardText } from "@/features/board/i18n/board-copy";
-import { taskTagToneStyles } from "@/features/board/tags/task-tag-styles";
+import {
+  customTaskTagToneStyle,
+  taskTagToneStyles,
+} from "@/features/board/tags/task-tag-styles";
 
 type TaskCardProps = {
   readonly dragDisabled?: boolean | undefined;
@@ -113,7 +116,8 @@ export const TaskCard = ({
               <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1">
                 {tags.map((tag) => (
                   <span
-                    className={`max-w-[11rem] shrink-0 truncate rounded-sm px-1.5 py-0.5 text-[12px] leading-3 font-medium ${taskTagToneStyles[tag.tone]}`}
+                    className={`max-w-[11rem] shrink-0 truncate rounded-sm px-1.5 py-0.5 text-[12px] leading-3 font-medium ${taskTagToneStyles[tag.tone] ?? "bg-board-selected text-board-secondary"}`}
+                    style={customTaskTagToneStyle(tag.tone)}
                     key={tag.id}
                     title={tag.name}
                   >

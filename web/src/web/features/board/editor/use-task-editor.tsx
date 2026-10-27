@@ -4,7 +4,12 @@ import { trackerBoardQuery } from "../data/tracker-query";
 import { toTrackerTask } from "../data/tracker-api";
 import { toast } from "sonner";
 import { ConfirmModal } from "@/features/board/components/confirm-modal";
-import { boardColumns, type Task } from "@/features/board/data/task-data";
+import {
+  boardColumns,
+  type BoardColumn,
+  type Task,
+  type TaskTagTone,
+} from "@/features/board/data/task-data";
 import { TaskEditorModal, type TaskEditorValues } from "./task-editor-modal";
 import { downloadTaskExportArchive } from "@/features/board/data/task-export";
 import type { TrackerTag, TrackerTagUpdate } from "@/features/board/data/tracker-api";
@@ -27,7 +32,10 @@ type EditorState = {
   readonly task?: Task | undefined;
 };
 
-export const useTaskEditor = (exportBlocked = false) => {
+export const useTaskEditor = (
+  exportBlocked = false,
+  columns: readonly BoardColumn[] = boardColumns,
+) => {
   const [editor, setEditor] = useState<EditorState | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
@@ -163,7 +171,7 @@ export const useTaskEditor = (exportBlocked = false) => {
       }
       try {
         await uploadAttachments(created.id);
-        const column = boardColumns.find(({ id }) => id === values.status);
+        const column = columns.find(({ id }) => id === values.status);
         toast.success(
           boardText("Задача добавлена в «{0}»", boardText(column?.label ?? "Бэк лог")),
         );
@@ -177,10 +185,7 @@ export const useTaskEditor = (exportBlocked = false) => {
     }
   };
 
-  const handleCreateTag = async (
-    name: string,
-    tone: "violet" | "green" | "amber" | "blue" | "rose",
-  ) => {
+  const handleCreateTag = async (name: string, tone: TaskTagTone) => {
     try {
       const created = await createTag.mutateAsync({ name, tone });
       toast.success(boardText("Тег «{0}» создан", created.name));
@@ -228,6 +233,7 @@ export const useTaskEditor = (exportBlocked = false) => {
       <>
         {editor && (
           <TaskEditorModal
+            columns={columns}
             events={eventsQuery.data?.items ?? []}
             key={`${editor.mode}-${editor.task?.id ?? "new"}`}
             mode={editor.mode}

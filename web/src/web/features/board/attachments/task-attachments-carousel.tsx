@@ -81,7 +81,7 @@ export const TaskAttachmentsCarousel = ({
     <>
       <ul
         aria-label={boardText("Вложения")}
-        className="flex snap-x gap-2 overflow-x-auto pt-2 pb-1"
+        className="flex snap-x gap-1.5 overflow-x-auto pt-1 pb-1"
       >
         {attachments.map((attachment) => {
           return (

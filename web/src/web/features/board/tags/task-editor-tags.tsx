@@ -4,7 +4,7 @@ import { TrackerCheckbox } from "@/features/board/components/checkbox";
 import type { TrackerTag } from "@/features/board/data/tracker-api";
 
 import { boardText } from "@/features/board/i18n/board-copy";
-import { taskTagToneStyles } from "./task-tag-styles";
+import { customTaskTagToneStyle, taskTagToneStyles } from "./task-tag-styles";
 
 type TaskEditorTagsProps = {
   readonly onConfigure?: (() => void) | undefined;
@@ -51,7 +51,8 @@ export const TaskEditorTags = ({
             <div className="flex flex-wrap gap-2">
               {selectedTags.map((tag) => (
                 <span
-                  className={`rounded-sm px-1.5 py-0.5 text-[14px] font-medium ${taskTagToneStyles[tag.tone]}`}
+                  className={`rounded-sm px-1.5 py-0.5 text-[14px] font-medium ${taskTagToneStyles[tag.tone] ?? "bg-board-selected text-board-secondary"}`}
+                  style={customTaskTagToneStyle(tag.tone)}
                   key={tag.id}
                 >
                   {tag.name}
@@ -83,7 +84,8 @@ export const TaskEditorTags = ({
                       onChange={() => onToggleTag?.(tag.id)}
                     />
                     <span
-                      className={`max-w-full min-w-0 truncate rounded-sm px-1.5 py-0.5 text-[14px] font-medium ${taskTagToneStyles[tag.tone]}`}
+                      className={`max-w-full min-w-0 truncate rounded-sm px-1.5 py-0.5 text-[14px] font-medium ${taskTagToneStyles[tag.tone] ?? "bg-board-selected text-board-secondary"}`}
+                      style={customTaskTagToneStyle(tag.tone)}
                     >
                       {tag.name}
                     </span>

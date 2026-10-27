@@ -6,7 +6,7 @@ import {
   getOrderedColumnTasks,
   moveBoardTask,
 } from "./task-board-order";
-import type { Task, TaskStatus } from "@/features/board/data/task-data";
+import { boardColumns, type Task, type TaskStatus } from "@/features/board/data/task-data";
 
 const card = (id: string, status: TaskStatus, order: number): Task => ({
   id,
@@ -56,6 +56,26 @@ describe("board insertion order", () => {
     expect(moveBoardTask(tasks, "a", { status: "queue", beforeId: "b" })).toBe(tasks);
     expect(moveBoardTask(tasks, "c", { status: "queue", beforeId: null })).toBe(tasks);
     expect(moveBoardTask(tasks, "a", { status: "review", beforeId: "missing" })).toBe(tasks);
+  });
+
+  it("includes user-defined columns in drag and keyboard destinations", () => {
+    const columns = [
+      ...boardColumns.slice(0, 5),
+      { id: "custom", label: "Custom", accent: "#123456" },
+      ...boardColumns.slice(5),
+    ];
+    expect(
+      ids(moveBoardTask(tasks, "a", { status: "custom", beforeId: null }, columns), "custom"),
+    ).toEqual(["a"]);
+    expect(
+      getKeyboardDropTarget(
+        tasks,
+        "a",
+        { status: "review", beforeId: null },
+        { x: 1, y: 0 },
+        columns,
+      ),
+    ).toEqual({ status: "custom", beforeId: null });
   });
 
   it("uses deterministic order for imported duplicate indices", () => {

@@ -1,18 +1,15 @@
 import type { TaskTagTone } from "@/features/board/data/task-data";
 
 import { boardText } from "@/features/board/i18n/board-copy";
+import { colorInputValue } from "@/features/board/color-picker-utils";
 
-const toneOptions: readonly {
-  readonly label: string;
-  readonly swatch: string;
-  readonly value: TaskTagTone;
-}[] = [
-  { label: "Фиолетовый", swatch: "bg-board-violet", value: "violet" },
-  { label: "Зелёный", swatch: "bg-board-green", value: "green" },
-  { label: "Янтарный", swatch: "bg-board-amber", value: "amber" },
-  { label: "Синий", swatch: "bg-board-blue", value: "blue" },
-  { label: "Розовый", swatch: "bg-board-rose", value: "rose" },
-];
+const legacyToneColors: Record<string, string> = {
+  violet: "var(--color-board-violet)",
+  green: "var(--color-board-green)",
+  amber: "var(--color-board-amber)",
+  blue: "var(--color-board-blue)",
+  rose: "var(--color-board-rose)",
+};
 
 type TaskTagToneSwatchesProps = {
   readonly compact?: boolean | undefined;
@@ -22,31 +19,19 @@ type TaskTagToneSwatchesProps = {
   readonly value: TaskTagTone;
 };
 
-export const TaskTagToneSwatches = ({
+export const TaskTagColorPicker = ({
   compact = false,
   disabled = false,
   label,
   onChange,
   value,
 }: TaskTagToneSwatchesProps) => (
-  <div
-    aria-label={label}
-    className={`flex items-center ${compact ? "gap-0.5" : "gap-1.5"}`}
-    role="radiogroup"
-  >
-    {toneOptions.map((tone) => (
-      <button
-        aria-label={boardText(tone.label)}
-        aria-checked={value === tone.value}
-        className={`focus-visible:ring-board-accent grid place-items-center rounded-full border-2 transition focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none ${compact ? "size-6" : "size-7"} ${value === tone.value ? "border-board-input-text" : "hover:border-board-border-hover border-transparent"}`}
-        disabled={disabled}
-        key={tone.value}
-        onClick={() => onChange(tone.value)}
-        role="radio"
-        type="button"
-      >
-        <span className={`${compact ? "size-3" : "size-4"} rounded-full ${tone.swatch}`} />
-      </button>
-    ))}
-  </div>
+  <input
+    aria-label={boardText(label)}
+    className={`border-board-input-border focus-visible:ring-board-accent cursor-pointer rounded-md border p-0.5 focus-visible:ring-2 ${compact ? "size-6" : "size-7"}`}
+    disabled={disabled}
+    onChange={(event) => onChange(event.target.value)}
+    type="color"
+    value={colorInputValue(legacyToneColors[value] ?? value)}
+  />
 );

@@ -234,7 +234,7 @@ it("persists comments and binary attachments atomically, broadcasts SSE, and ret
     expect.arrayContaining([expect.objectContaining({ type: "comment_added" })]),
   );
   expect((await postComment(task.id, id, "Changed payload", [file])).status).toBe(409);
-  const second = (await (await call("/cards", input)).json()) as Task;
+  const second = (await (await call("/cards", { ...input, status: "queue" })).json()) as Task;
   expect(
     (await call(`/cards/${second.id}/attachments/${comment.attachments[0]!.id}`)).status,
   ).toBe(404);

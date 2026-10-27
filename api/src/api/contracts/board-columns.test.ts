@@ -3,7 +3,7 @@ import { expect, it } from "vitest";
 import { boardColumns } from "./board-columns.js";
 import { taskInputSchema, taskStatuses } from "./board.js";
 
-it("derives task status validation from the shared board column array", () => {
+it("validates status strings while the board store validates saved column IDs", () => {
   expect(taskStatuses).toEqual(boardColumns.map(({ id }) => id));
   for (const { id } of boardColumns) {
     expect(
@@ -11,5 +11,6 @@ it("derives task status validation from the shared board column array", () => {
       `column ${id} should be accepted as a task status`,
     ).toHaveProperty("success", true);
   }
-  expect(taskInputSchema.shape.status.safeParse("not-a-board-column").success).toBe(false);
+  expect(taskInputSchema.shape.status.safeParse("new-user-column").success).toBe(true);
+  expect(taskInputSchema.shape.status.safeParse("").success).toBe(false);
 });

@@ -1,5 +1,5 @@
 import { useDroppable } from "@dnd-kit/react";
-import { Download } from "lucide-react";
+import { Settings2 } from "lucide-react";
 
 import { DraggableTaskCard } from "./task-card";
 import type { BoardColumn as BoardColumnType, Task } from "@/features/board/data/task-data";
@@ -9,10 +9,7 @@ import { boardText } from "@/features/board/i18n/board-copy";
 type BoardColumnProps = {
   readonly column: BoardColumnType;
   readonly dragDisabled: boolean;
-  readonly exportDisabled: boolean;
-  readonly exportTaskCount: number;
-  readonly isExporting: boolean;
-  readonly onExportAll: () => void;
+  readonly onConfigure: () => void;
   readonly onOpen: (task: Task) => void;
   readonly tasks: readonly Task[];
   readonly insertionBeforeId?: string | null | undefined;
@@ -21,10 +18,7 @@ type BoardColumnProps = {
 export const BoardColumn = ({
   column,
   dragDisabled,
-  exportDisabled,
-  exportTaskCount,
-  isExporting,
-  onExportAll,
+  onConfigure,
   onOpen,
   tasks,
   insertionBeforeId,
@@ -64,21 +58,13 @@ export const BoardColumn = ({
           </span>
         </div>
         <button
-          aria-label={boardText(
-            "Экспортировать все задачи колонки «{0}»",
-            boardText(column.label),
-          )}
-          title={boardText(isExporting ? "Подготовка архива…" : "Экспортировать все")}
-          aria-busy={isExporting}
+          aria-label={boardText("Настроить колонку {0}", boardText(column.label))}
+          title={boardText("Настроить колонку")}
           className="text-board-icon hover:bg-board-selected grid size-6 shrink-0 place-items-center rounded-sm transition-colors disabled:cursor-not-allowed disabled:opacity-30"
-          disabled={exportDisabled || exportTaskCount === 0}
-          onClick={onExportAll}
+          onClick={onConfigure}
           type="button"
         >
-          <Download
-            aria-hidden="true"
-            className={`size-3 ${isExporting ? "animate-pulse" : ""}`}
-          />
+          <Settings2 aria-hidden="true" className="size-3.5" />
         </button>
       </header>
 

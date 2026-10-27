@@ -214,7 +214,13 @@ it("protects the board, preserves ordering and rejects stale edits", async () =>
       })
     ).status,
   ).toBe(409);
-  expect(Object.keys(snapshot).sort()).toEqual(["cards", "tags", "version"]);
+  expect(Object.keys(snapshot).sort()).toEqual([
+    "cards",
+    "columns",
+    "dividers",
+    "tags",
+    "version",
+  ]);
   const current = snapshot.cards.find((card) => card.id === first.id)!;
   // Historical task metadata must not leak through the maintained board contract.
   store.db
@@ -245,6 +251,73 @@ it("protects the board, preserves ordering and rejects stale edits", async () =>
   });
   expect((await call("/board")).status).toBe(200);
   expect((await call("/board/cards", input, false)).status).toBe(401);
+});
+
+it("creates, edits, orders and safely removes persisted columns and dividers", async () => {
+  const initial = (await (await call("/board")).json()) as BoardSnapshot;
+  const baseColumns = initial.columns!;
+  expect((await call("/board/tags", { name: "Custom color", tone: "#3478ab" })).status).toBe(
+    201,
+  );
+  expect(
+    (await call("/board/tags", { name: "Invalid color", tone: "rgb(1,2,3)" })).status,
+  ).toBe(400);
+  const createdResponse = await call("/board/columns", {
+    label: "Custom review",
+    accent: "#123456",
+  });
+  expect(createdResponse.status).toBe(201);
+  const created = (await createdResponse.json()) as NonNullable<
+    BoardSnapshot["columns"]
+  >[number];
+  expect(
+    (await call("/board/columns", { label: "Bad color", accent: "url(javascript:1)" })).status,
+  ).toBe(400);
+
+  const updatedResponse = await call(`/board/columns/${created.id}`, {
+    label: "Custom check",
+    accent: "var(--color-board-review)",
+  });
+  expect(await updatedResponse.json()).toMatchObject({ id: created.id, label: "Custom check" });
+
+  const ids = [created.id, ...baseColumns.map(({ id }) => id)];
+  expect((await call("/board/columns/order", { ids })).status).toBe(200);
+  const card = (await (
+    await call("/board/cards", {
+      title: "Custom column task",
+      description: null,
+      status: created.id,
+      priority: "medium",
+      tagIds: [],
+    })
+  ).json()) as Task;
+  expect(card.status).toBe(created.id);
+  expect((await call(`/board/columns/${created.id}/remove`, {})).status).toBe(409);
+
+  const archived = (await (
+    await call(`/board/cards/${card.id}`, { revision: card.revision, archived: true })
+  ).json()) as Task;
+  expect((await call(`/board/columns/${created.id}/remove`, {})).status).toBe(409);
+  const moved = await call(`/board/cards/${card.id}`, {
+    revision: archived.revision,
+    archived: false,
+    status: "backlog",
+  });
+  expect(moved.status).toBe(200);
+  expect((await call(`/board/columns/${created.id}/remove`, {})).status).toBe(200);
+
+  const divider = (await (await call("/board/dividers", {})).json()) as NonNullable<
+    BoardSnapshot["dividers"]
+  >[number];
+  expect(((await (await call("/board")).json()) as BoardSnapshot).dividers).toContainEqual(
+    divider,
+  );
+  expect(await (await call(`/board/dividers/${divider.id}/remove`, {})).json()).toEqual({
+    id: divider.id,
+  });
+  const finalSnapshot = (await (await call("/board")).json()) as BoardSnapshot;
+  expect(finalSnapshot.columns?.map(({ id }) => id)).toEqual(baseColumns.map(({ id }) => id));
+  expect(finalSnapshot.dividers).toEqual([]);
 });
 
 it("stores authenticated binary attachments and serves them only as downloads", async () => {

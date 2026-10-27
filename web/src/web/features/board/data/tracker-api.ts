@@ -19,6 +19,8 @@ import type {
   TaskTagTone,
   TrackerEvent,
 } from "./task-data";
+import type { BoardColumn, BoardDivider } from "@contracts/board-columns.js";
+import { boardColumns as defaultBoardColumns } from "@contracts/board-columns.js";
 
 export type TrackerTag = TaskTag & { readonly usageCount: number };
 
@@ -45,7 +47,12 @@ export type CardUpdate = Partial<CardInput> & {
 // Uploads continue the revision returned by the preceding explicit save, not background refreshes.
 const savedCards = new Map<string, StoredTask>();
 
-let snapshot: BoardSnapshot = { cards: [], tags: [] };
+let snapshot: BoardSnapshot = {
+  cards: [],
+  tags: [],
+  columns: [...defaultBoardColumns],
+  dividers: [],
+};
 
 export const resetTrackerState = () => {
   savedCards.clear();
@@ -68,9 +75,31 @@ const remember = (card: StoredTask) => {
 
 export const getTrackerSnapshot = async (signal?: AbortSignal) => {
   const value = await request<LiveBoardSnapshot>("/board", undefined, signal);
-  snapshot = value;
-  return value;
+  const normalized = {
+    ...value,
+    columns: value.columns ?? [...defaultBoardColumns],
+    dividers: value.dividers ?? [],
+  };
+  snapshot = normalized;
+  return normalized;
 };
+
+export const createTrackerColumn = (input: Pick<BoardColumn, "label" | "accent">) =>
+  request<BoardColumn>("/board/columns", input);
+
+export const updateTrackerColumn = (id: string, input: Pick<BoardColumn, "label" | "accent">) =>
+  request<BoardColumn>(`/board/columns/${encodeURIComponent(id)}`, input);
+
+export const reorderTrackerColumns = (ids: readonly string[]) =>
+  request<BoardColumn[]>("/board/columns/order", { ids });
+
+export const deleteTrackerColumn = (id: string) =>
+  request<{ id: string }>(`/board/columns/${encodeURIComponent(id)}/remove`, {});
+
+export const createTrackerDivider = () => request<BoardDivider>("/board/dividers", {});
+
+export const deleteTrackerDivider = (id: string) =>
+  request<{ id: string }>(`/board/dividers/${encodeURIComponent(id)}/remove`, {});
 
 export const selectTrackerCards = (
   board: BoardSnapshot,

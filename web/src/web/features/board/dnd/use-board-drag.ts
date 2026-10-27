@@ -11,7 +11,7 @@ import {
   getOrderedColumnTasks,
   moveBoardTask,
 } from "./task-board-order";
-import { type Task, boardColumns } from "@/features/board/data/task-data";
+import { type BoardColumn, type Task, boardColumns } from "@/features/board/data/task-data";
 import type { useUpdateTrackerCard } from "@/features/board/data/tracker-hooks";
 
 type DragSession = {
@@ -27,6 +27,7 @@ export const useBoardDrag = (
   tasks: readonly Task[],
   allTasks: readonly Task[] | undefined,
   updateCard: Pick<ReturnType<typeof useUpdateTrackerCard>, "mutate" | "isPending">,
+  columns: readonly BoardColumn[] = boardColumns,
 ) => {
   const session = useRef<DragSession | null>(null);
   const [displayedTasks, setDisplayedTasks] = useState<readonly Task[] | null>(null);
@@ -50,7 +51,9 @@ export const useBoardDrag = (
   const updatePointer = (manager: DragDropManager) => {
     const drag = session.current;
     if (drag && !drag.keyboard && !drag.saving)
-      updateTarget(getPointerDropTarget(manager, drag.tasks, drag.source.id));
+      updateTarget(
+        getPointerDropTarget(manager, drag.tasks, drag.source.id, undefined, columns),
+      );
   };
   const handleBeforeDragStart: DragDropEventHandlers["onBeforeDragStart"] = (event) => {
     if (!allTasks || updateCard.isPending || session.current) event.preventDefault();
@@ -86,7 +89,13 @@ export const useBoardDrag = (
     const drag = session.current;
     if (!drag?.keyboard || !event.by || !drag.target) return;
     event.preventDefault();
-    const target = getKeyboardDropTarget(drag.tasks, drag.source.id, drag.target, event.by);
+    const target = getKeyboardDropTarget(
+      drag.tasks,
+      drag.source.id,
+      drag.target,
+      event.by,
+      columns,
+    );
     updateTarget(target);
     moveKeyboardOverlay(manager, target);
   };
@@ -105,12 +114,12 @@ export const useBoardDrag = (
         : undefined;
     const target = drag.keyboard
       ? drag.target
-      : getPointerDropTarget(manager, drag.tasks, drag.source.id, point);
+      : getPointerDropTarget(manager, drag.tasks, drag.source.id, point, columns);
     if (event.canceled || !target) {
       clear();
       return;
     }
-    const next = moveBoardTask(drag.tasks, drag.source.id, target);
+    const next = moveBoardTask(drag.tasks, drag.source.id, target, columns);
     if (next === drag.tasks) {
       clear();
       return;
@@ -132,7 +141,8 @@ export const useBoardDrag = (
           clear();
         },
         onSuccess: () => {
-          const label = boardColumns.find((column) => column.id === target.status)!.label;
+          const label =
+            columns.find((column) => column.id === target.status)?.label ?? target.status;
           toast.success(boardText("Задача перемещена в «{0}»", boardText(label)));
           clear();
         },

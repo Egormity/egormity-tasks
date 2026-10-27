@@ -69,10 +69,7 @@ const Harness = ({ items = tasks }: { readonly items?: Task[] }) => {
           insertionBeforeId={
             drag.dropTarget?.status === column.id ? drag.dropTarget.beforeId : undefined
           }
-          exportDisabled
-          exportTaskCount={0}
-          isExporting={false}
-          onExportAll={() => {}}
+          onConfigure={() => {}}
           onOpen={() => {}}
         />
       ))}

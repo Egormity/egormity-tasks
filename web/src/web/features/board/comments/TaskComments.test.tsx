@@ -45,6 +45,8 @@ it("retains failed drafts/files and refreshes comments after a live board revisi
   client.setQueryData(trackerBoardQuery.queryKey, {
     cards: [{ id: "task", revision: 1 } as Task],
     tags: [],
+    columns: [],
+    dividers: [],
     version: "v1",
   });
   render(
@@ -78,6 +80,8 @@ it("retains failed drafts/files and refreshes comments after a live board revisi
     client.setQueryData(trackerBoardQuery.queryKey, {
       cards: [{ id: "task", revision: 3 } as Task],
       tags: [],
+      columns: [],
+      dividers: [],
       version: "v3",
     });
   });

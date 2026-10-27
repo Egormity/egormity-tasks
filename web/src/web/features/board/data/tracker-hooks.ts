@@ -5,14 +5,20 @@ import {
   type CardInput,
   type CardUpdate,
   archiveTrackerCard,
+  createTrackerColumn,
+  createTrackerDivider,
   createTrackerCard,
   createTrackerTag,
+  deleteTrackerColumn,
+  deleteTrackerDivider,
   deleteTrackerTag,
   getTrackerEvents,
   selectTrackerCards,
   selectTrackerTags,
   restoreTrackerCard,
+  reorderTrackerColumns,
   updateTrackerCard,
+  updateTrackerColumn,
   updateTrackerTag,
   uploadTrackerCardAttachment,
 } from "./tracker-api";
@@ -42,6 +48,33 @@ export const useTrackerEvents = (cardId?: string) => {
 };
 
 const invalidateTracker = refreshTrackerBoard;
+
+export type BoardConfigurationAction =
+  | { readonly type: "create-column"; readonly input: { label: string; accent: string } }
+  | {
+      readonly type: "update-column";
+      readonly id: string;
+      readonly input: { label: string; accent: string };
+    }
+  | { readonly type: "reorder-columns"; readonly ids: readonly string[] }
+  | { readonly type: "delete-column"; readonly id: string }
+  | { readonly type: "add-divider" }
+  | { readonly type: "delete-divider"; readonly id: string };
+
+export const useBoardConfiguration = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (action: BoardConfigurationAction) => {
+      if (action.type === "create-column") return createTrackerColumn(action.input);
+      if (action.type === "update-column") return updateTrackerColumn(action.id, action.input);
+      if (action.type === "reorder-columns") return reorderTrackerColumns(action.ids);
+      if (action.type === "delete-column") return deleteTrackerColumn(action.id);
+      if (action.type === "add-divider") return createTrackerDivider();
+      return deleteTrackerDivider(action.id);
+    },
+    onSuccess: () => invalidateTracker(queryClient),
+  });
+};
 
 export const useCreateTrackerCard = () => {
   const queryClient = useQueryClient();

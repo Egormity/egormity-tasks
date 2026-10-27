@@ -1,4 +1,9 @@
-import { type Task, type TaskStatus, boardColumns } from "@/features/board/data/task-data";
+import {
+  type BoardColumn,
+  type Task,
+  type TaskStatus,
+  boardColumns,
+} from "@/features/board/data/task-data";
 
 export type BoardDropTarget = {
   readonly status: TaskStatus;
@@ -19,6 +24,7 @@ export const moveBoardTask = (
   tasks: readonly Task[],
   taskId: string,
   target: BoardDropTarget,
+  columns: readonly BoardColumn[] = boardColumns,
 ): readonly Task[] => {
   const source = tasks.find((task) => task.id === taskId);
   if (!source || source.status === "archived") return tasks;
@@ -34,7 +40,7 @@ export const moveBoardTask = (
       : destination.findIndex((task) => task.id === target.beforeId);
   if (index < 0) return tasks;
   destination.splice(index, 0, { ...source, status: target.status });
-  return boardColumns.flatMap(({ id }) =>
+  return columns.flatMap(({ id }) =>
     (id === target.status
       ? destination
       : getOrderedColumnTasks(tasks, id).filter((task) => task.id !== taskId)
@@ -68,6 +74,7 @@ export const getKeyboardDropTarget = (
   taskId: string,
   current: BoardDropTarget,
   direction: { readonly x: number; readonly y: number },
+  columns: readonly BoardColumn[] = boardColumns,
 ): BoardDropTarget => {
   const column = getOrderedColumnTasks(tasks, current.status).filter(
     (task) => task.id !== taskId,
@@ -76,11 +83,10 @@ export const getKeyboardDropTarget = (
     current.beforeId === null
       ? column.length
       : column.findIndex((task) => task.id === current.beforeId);
-  const columnIndex = boardColumns.findIndex((column) => column.id === current.status);
+  const columnIndex = columns.findIndex((column) => column.id === current.status);
   const status =
-    boardColumns[
-      Math.max(0, Math.min(boardColumns.length - 1, columnIndex + Math.sign(direction.x)))
-    ]!.id;
+    columns[Math.max(0, Math.min(columns.length - 1, columnIndex + Math.sign(direction.x)))]!
+      .id;
   const destination = getOrderedColumnTasks(tasks, status).filter((task) => task.id !== taskId);
   index = Math.max(0, Math.min(destination.length, index + Math.sign(direction.y)));
   return { status, beforeId: destination[index]?.id ?? null };

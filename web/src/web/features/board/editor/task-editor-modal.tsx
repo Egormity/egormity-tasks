@@ -17,6 +17,7 @@ import {
 } from "@/features/board/attachments/task-attachment-utils";
 import {
   boardColumns,
+  type BoardColumn,
   type Task,
   type TaskAttachment,
   type TaskStatus,
@@ -47,6 +48,7 @@ export type TaskEditorValues = {
 
 type TaskEditorModalProps = {
   readonly mode: TaskEditorMode;
+  readonly columns?: readonly BoardColumn[] | undefined;
   readonly onArchive?: (() => void) | undefined;
   readonly isArchiving?: boolean | undefined;
   readonly isSaving?: boolean | undefined;
@@ -73,6 +75,7 @@ export type TaskEditorMode = "create" | "edit" | "view";
 export const TaskEditorModal = ({
   events,
   mode,
+  columns = boardColumns,
   onArchive,
   onCancel,
   onCreateTag,
@@ -104,7 +107,9 @@ export const TaskEditorModal = ({
     task?.tags?.map((tag) => tag.id) ?? [],
   );
   const [status, setStatus] = useState<TaskStatus>(
-    task?.status && task.status !== "archived" ? task.status : "backlog",
+    task?.status && task.status !== "archived"
+      ? task.status
+      : (columns.find(({ id }) => id === "backlog")?.id ?? columns[0]?.id ?? "backlog"),
   );
   const appliedTagIds = selectedTagIds.filter((id) => tags.some((tag) => tag.id === id));
   const handleAddFiles = useCallback((files: readonly File[]) => {
@@ -270,7 +275,7 @@ export const TaskEditorModal = ({
                         selectedTagIds={appliedTagIds}
                         tags={tags}
                       />
-                      {task && <TaskEditorHistory events={events} />}
+                      {task && <TaskEditorHistory columns={columns} events={events} />}
                     </aside>
                   </>
                 ) : (
@@ -314,10 +319,10 @@ export const TaskEditorModal = ({
                           <select
                             className="border-board-input-border bg-board-input-surface text-board-input-text focus:border-board-accent focus:ring-board-accent/15 mt-1.5 h-8 w-full rounded-md border px-2.5 text-xs transition outline-none focus:ring-2"
                             id="task-status"
-                            onChange={(event) => setStatus(event.target.value as TaskStatus)}
+                            onChange={(event) => setStatus(event.target.value)}
                             value={status}
                           >
-                            {boardColumns.map((column) => (
+                            {columns.map((column) => (
                               <option key={column.id} value={column.id}>
                                 {boardText(column.label)}
                               </option>
@@ -376,7 +381,7 @@ export const TaskEditorModal = ({
                         tags={tags}
                       />
 
-                      {task && <TaskEditorHistory events={events} />}
+                      {task && <TaskEditorHistory columns={columns} events={events} />}
                     </aside>
                   </>
                 )}

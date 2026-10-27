@@ -117,7 +117,7 @@ it("preserves source identities, archive, metadata, history and bytes across res
 it("rolls back the complete import on corrupted bytes or inconsistent references", () => {
   writeFileSync(join(directory, "files", hash), "corrupted");
   expect(importFixture).toThrow("integrity");
-  expect(board.snapshot()).toEqual({ cards: [], tags: [] });
+  expect(board.snapshot()).toMatchObject({ cards: [], tags: [], dividers: [] });
   expect(chats.db.prepare("SELECT count(*) AS count FROM task_imports").get()?.count).toBe(0);
   writeFileSync(join(directory, "files", hash), bytes);
   bundle.events[0]!.cardId = "unknown-card";

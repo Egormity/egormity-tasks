@@ -44,12 +44,17 @@ Task history is cached by task ID and revision and reread when that revision cha
 Comments in `comments/TaskComments.tsx` also use task ID/revision and retain their input across live
 updates. The task view shows comments with preview/download attachments; multipart writes commit
 text and files together and retain the draft after failure. Exports include comments and their files.
-The canonical ordered column array is `api/src/api/contracts/board-columns.ts`; Web mirrors it at
-`web/src/api/contracts/board-columns.ts`, where it supplies the same IDs, labels and accents for
-rendering. Update both arrays together. Task statuses are persisted as JSON strings, not a database
-enum, and API validation derives from the array, so adding or reordering a column does not require a
-database migration. Keep IDs stable for existing tasks; translate new labels in
-`i18n/board-copy.catalog.ts`.
+`BoardStore` persists the ordered, editable column list and board-wide dividers in SQLite's
+`board_settings` JSON rows. It seeds the default array only when no saved setting exists, so changes
+survive API restarts without a versioned database migration. The API-owned defaults and validation
+schema live in `api/src/api/contracts/board-columns.ts`; Web mirrors the contract. Task statuses
+remain strings and are validated against the current saved columns. Column IDs stay stable; a column
+with assigned (including archived) tasks cannot be deleted until those tasks are moved. The Web
+column settings dialog creates, renames, recolors, reorders and removes empty columns, and keeps the
+column export action there. Dividers append across the board and can be removed individually.
+Column and tag colors accept custom hex values through the color picker; legacy named tag colors
+remain supported for existing records. Attachment cards use a compact horizontal preview and action
+layout.
 New tasks can be assigned to any board column (Backlog by default) and are inserted at the top of
 that column. The English board label for the clarification/design column is “Design required.”
 Attachment bytes and parsed text are cached by file identity/content hash, without timers or broad invalidation.

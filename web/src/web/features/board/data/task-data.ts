@@ -3,7 +3,7 @@ import { boardColumns } from "@contracts/board-columns.js";
 export { boardColumns };
 export type TaskStatus = import("@contracts/board.js").Task["status"];
 
-export type TaskTagTone = "violet" | "green" | "amber" | "blue" | "rose";
+export type TaskTagTone = import("@contracts/board.js").TaskTag["tone"];
 
 export type TaskPriority = "low" | "medium" | "high";
 
@@ -31,7 +31,7 @@ export type Task = {
   readonly id: string;
   readonly order: number;
   readonly priority: TaskPriority;
-  readonly status: TaskStatus | "archived";
+  readonly status: TaskStatus;
   readonly tag?: string | undefined;
   readonly tagTone?: TaskTagTone | undefined;
   readonly tags: readonly TaskTag[];

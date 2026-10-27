@@ -1,5 +1,6 @@
 import {
   boardColumns,
+  type BoardColumn,
   type TaskAttachment,
   type TrackerEventChange,
 } from "@/features/board/data/task-data";
@@ -60,21 +61,28 @@ const formatAttachmentChange = (
   return boardText("Вложения изменены: {0}", parts.join(", "));
 };
 
-export const getTrackerStatusLabel = (status: string, label?: string) => {
+export const getTrackerStatusLabel = (
+  status: string,
+  label?: string,
+  columns: readonly BoardColumn[] = boardColumns,
+) => {
   if (label) return boardText(label);
   if (status === "archived") return boardText("Архив");
-  return boardText(boardColumns.find((column) => column.id === status)?.label ?? status);
+  return boardText(columns.find((column) => column.id === status)?.label ?? status);
 };
 
 export const getTrackerEventFieldLabel = (field: string) =>
   boardText(fieldLabels[field] ?? field);
 
-export const formatTrackerEventChange = (change: TrackerEventChange): string => {
+export const formatTrackerEventChange = (
+  change: TrackerEventChange,
+  columns: readonly BoardColumn[] = boardColumns,
+): string => {
   if (change.field === "status") {
     return boardText(
       "Статус изменён с «{0}» на «{1}»",
-      getTrackerStatusLabel(change.from, change.fromLabel),
-      getTrackerStatusLabel(change.to, change.toLabel),
+      getTrackerStatusLabel(change.from, change.fromLabel, columns),
+      getTrackerStatusLabel(change.to, change.toLabel, columns),
     );
   }
   if (change.field === "title") {

@@ -3,6 +3,7 @@ import type { DatabaseSync } from "node:sqlite";
 
 import type {
   BoardSnapshot,
+  BoardDivider,
   Task,
   TaskAttachment,
   TaskEvent,
@@ -10,6 +11,10 @@ import type {
   TaskTag,
   TaskUpdate,
 } from "../contracts/board.js";
+import {
+  boardColumns as defaultBoardColumns,
+  boardColumnsSchema,
+} from "../contracts/board-columns.js";
 
 import { HttpError } from "../auth/auth.js";
 import { CommentStore } from "./comments/comment-store.js";
@@ -27,9 +32,100 @@ export class BoardStore {
       CREATE INDEX IF NOT EXISTS task_events_card ON task_events(cardId);
       CREATE TABLE IF NOT EXISTS task_files (sha256 TEXT PRIMARY KEY, bytes BLOB NOT NULL);
       CREATE TABLE IF NOT EXISTS task_imports (source TEXT PRIMARY KEY, digest TEXT NOT NULL, data TEXT NOT NULL);
+      CREATE TABLE IF NOT EXISTS board_settings (key TEXT PRIMARY KEY, data TEXT NOT NULL);
     `);
+    this.db
+      .prepare("INSERT OR IGNORE INTO board_settings (key, data) VALUES (?, ?)")
+      .run("columns", JSON.stringify(defaultBoardColumns));
+    this.db
+      .prepare("INSERT OR IGNORE INTO board_settings (key, data) VALUES (?, ?)")
+      .run("dividers", "[]");
     this.comments = new CommentStore(this);
   }
+
+  private readSetting = <T>(key: string, fallback: T): T => {
+    const row = this.db.prepare("SELECT data FROM board_settings WHERE key = ?").get(key);
+    return row ? (JSON.parse(String(row.data)) as T) : fallback;
+  };
+
+  private writeSetting = (key: string, value: unknown) =>
+    this.db
+      .prepare(
+        "INSERT INTO board_settings (key, data) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET data=excluded.data",
+      )
+      .run(key, JSON.stringify(value));
+
+  columns = () => boardColumnsSchema.parse(this.readSetting("columns", defaultBoardColumns));
+
+  dividers = (): BoardDivider[] => this.readSetting("dividers", []);
+
+  createColumn = (input: { label: string; accent: string }) => {
+    const columns = this.columns();
+    if (columns.length >= 20)
+      throw new HttpError(409, "The board can have at most 20 columns.");
+    const column = { ...input, id: `column-${randomUUID()}` };
+    const updated = boardColumnsSchema.parse([...columns, column]);
+    this.writeSetting("columns", updated);
+    return column;
+  };
+
+  updateColumn = (id: string, input: { label: string; accent: string }) => {
+    const columns = this.columns();
+    const current = columns.find((column) => column.id === id);
+    if (!current) throw new HttpError(404, "Column not found.");
+    const saved = { ...current, ...input };
+    const updated = columns.map((column) => (column.id === id ? saved : column));
+    this.writeSetting("columns", boardColumnsSchema.parse(updated));
+    return saved;
+  };
+
+  reorderColumns = (ids: string[]) => {
+    const columns = this.columns();
+    if (
+      ids.length !== columns.length ||
+      new Set(ids).size !== ids.length ||
+      ids.some((id) => !columns.some((column) => column.id === id))
+    )
+      throw new HttpError(400, "Column order must include every column exactly once.");
+    const byId = new Map(columns.map((column) => [column.id, column]));
+    const updated = ids.map((id) => byId.get(id)!);
+    this.writeSetting("columns", updated);
+    return updated;
+  };
+
+  deleteColumn = (id: string) => {
+    const columns = this.columns();
+    if (!columns.some((column) => column.id === id))
+      throw new HttpError(404, "Column not found.");
+    if (columns.length <= 1)
+      throw new HttpError(409, "The last board column cannot be deleted.");
+    if (this.cards().some((card) => card.status === id))
+      throw new HttpError(409, "Move or archive the column's tasks before deleting it.");
+    this.writeSetting(
+      "columns",
+      columns.filter((column) => column.id !== id),
+    );
+    return { id };
+  };
+
+  addDivider = () => {
+    const divider: BoardDivider = { id: randomUUID() };
+    const dividers = this.dividers();
+    dividers.push(divider);
+    this.writeSetting("dividers", dividers);
+    return divider;
+  };
+
+  deleteDivider = (id: string) => {
+    const dividers = this.dividers();
+    if (!dividers.some((divider) => divider.id === id))
+      throw new HttpError(404, "Divider not found.");
+    this.writeSetting(
+      "dividers",
+      dividers.filter((divider) => divider.id !== id),
+    );
+    return { id };
+  };
 
   transaction = <T>(action: () => T): T => {
     this.db.exec("BEGIN IMMEDIATE");
@@ -61,7 +157,12 @@ export class BoardStore {
       .all()
       .map((row) => JSON.parse(String(row.data)) as TaskTag);
 
-  snapshot = (): BoardSnapshot => ({ cards: this.cards(), tags: this.tags() });
+  snapshot = (): BoardSnapshot => ({
+    cards: this.cards(),
+    tags: this.tags(),
+    columns: this.columns(),
+    dividers: this.dividers(),
+  });
 
   get = (id: string): Task => {
     const row = this.db.prepare("SELECT data FROM task_cards WHERE id = ?").get(id);
@@ -106,6 +207,8 @@ export class BoardStore {
 
   create = (input: TaskInput, actor: string): Task =>
     this.transaction(() => {
+      if (!this.columns().some((column) => column.id === input.status))
+        throw new HttpError(400, "Choose a current board column.");
       this.validateTags(input.tagIds);
       const now = new Date().toISOString();
       const column = this.cards().filter(
@@ -137,6 +240,8 @@ export class BoardStore {
       if (input.tagIds) this.validateTags(input.tagIds);
       const { revision: _revision, archived, beforeId, attachmentIds, ...fields } = input;
       void _revision;
+      if (fields.status && !this.columns().some((column) => column.id === fields.status))
+        throw new HttpError(400, "Choose a current board column.");
       if (
         attachmentIds?.some(
           (attachmentId) => !current.attachments.some((a) => a.id === attachmentId),

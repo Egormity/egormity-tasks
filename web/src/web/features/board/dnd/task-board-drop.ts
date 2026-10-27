@@ -1,7 +1,7 @@
 import type { DragDropManager } from "@dnd-kit/react";
 
 import { type BoardDropTarget, getOrderedColumnTasks } from "./task-board-order";
-import { type Task, boardColumns } from "@/features/board/data/task-data";
+import { type BoardColumn, type Task, boardColumns } from "@/features/board/data/task-data";
 
 type Point = { readonly x: number; readonly y: number };
 
@@ -32,8 +32,9 @@ export const getPointerDropTarget = (
   tasks: readonly Task[],
   taskId: string,
   point: Point = manager.dragOperation.position.current,
+  columns: readonly BoardColumn[] = boardColumns,
 ): BoardDropTarget | null => {
-  for (const { id: status } of boardColumns) {
+  for (const { id: status } of columns) {
     const element = manager.registry.droppables.get(status)?.element;
     if (!element || !containsVisiblePoint(element, point)) continue;
     const elements = new Map(

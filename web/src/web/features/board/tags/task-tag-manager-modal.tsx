@@ -14,7 +14,7 @@ import type { TaskTagTone } from "@/features/board/data/task-data";
 import type { TrackerTag, TrackerTagUpdate } from "@/features/board/data/tracker-api";
 
 import { boardText } from "@/features/board/i18n/board-copy";
-import { TaskTagToneSwatches } from "./task-tag-ui";
+import { TaskTagColorPicker } from "./task-tag-ui";
 
 type TaskTagManagerModalProps = {
   readonly onCreateTag: (name: string, tone: TaskTagTone) => Promise<TrackerTag | undefined>;
@@ -177,7 +177,7 @@ export const TaskTagManagerModal = ({
                       </div>
                       <div className="ml-auto flex items-center gap-1">
                         <div className="flex items-center gap-1">
-                          <TaskTagToneSwatches
+                          <TaskTagColorPicker
                             compact
                             disabled={updatingTagId !== null}
                             label={boardText("Цвет тега {0}", tag.name)}
@@ -254,7 +254,7 @@ export const TaskTagManagerModal = ({
                 value={newTagName}
               />
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <TaskTagToneSwatches
+                <TaskTagColorPicker
                   compact
                   label={boardText("Цвет нового тега")}
                   onChange={setNewTagTone}
