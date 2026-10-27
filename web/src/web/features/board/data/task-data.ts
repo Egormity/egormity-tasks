@@ -1,3 +1,6 @@
+import { boardColumns } from "@contracts/board-columns.js";
+
+export { boardColumns };
 export type TaskStatus = import("@contracts/board.js").Task["status"];
 
 export type TaskTagTone = "violet" | "green" | "amber" | "blue" | "rose";
@@ -79,21 +82,4 @@ export type TrackerEvent = {
   readonly type: string;
 };
 
-export type BoardColumn = {
-  readonly accent: string;
-  readonly id: TaskStatus;
-  readonly label: string;
-};
-
-export const boardColumns: readonly BoardColumn[] = [
-  { id: "backlog", label: "Бэк лог", accent: "var(--color-board-backlog)" },
-  {
-    id: "clarification",
-    label: "Нужно уточнение / дизайн",
-    accent: "var(--color-board-clarification)",
-  },
-  { id: "queue", label: "Очередь", accent: "var(--color-board-queue)" },
-  { id: "inProgress", label: "Готово к публикации", accent: "var(--color-board-ready)" },
-  { id: "review", label: "Приёмка", accent: "var(--color-board-review)" },
-  { id: "done", label: "Готово", accent: "var(--color-board-done)" },
-];
+export type BoardColumn = import("@contracts/board-columns.js").BoardColumn;

@@ -1,16 +1,10 @@
-import type { TaskAttachment, TrackerEventChange } from "@/features/board/data/task-data";
+import {
+  boardColumns,
+  type TaskAttachment,
+  type TrackerEventChange,
+} from "@/features/board/data/task-data";
 
 import { boardText } from "@/features/board/i18n/board-copy";
-
-const statusLabels: Record<string, string> = {
-  archived: "Архив",
-  backlog: "Бэк лог",
-  clarification: "Нужно уточнение / дизайн",
-  done: "Готово",
-  inProgress: "Готово к публикации",
-  queue: "Очередь",
-  review: "Приёмка",
-};
 
 const fieldLabels: Record<string, string> = {
   attachments: "Вложения",
@@ -66,8 +60,11 @@ const formatAttachmentChange = (
   return boardText("Вложения изменены: {0}", parts.join(", "));
 };
 
-export const getTrackerStatusLabel = (status: string, label?: string) =>
-  boardText(statusLabels[status] ?? label ?? status);
+export const getTrackerStatusLabel = (status: string, label?: string) => {
+  if (label) return boardText(label);
+  if (status === "archived") return boardText("Архив");
+  return boardText(boardColumns.find((column) => column.id === status)?.label ?? status);
+};
 
 export const getTrackerEventFieldLabel = (field: string) =>
   boardText(fieldLabels[field] ?? field);

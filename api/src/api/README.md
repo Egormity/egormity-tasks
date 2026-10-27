@@ -13,3 +13,7 @@ checks; account management also requires an administrator role. Committed board 
 invalidations. SQLite stores workspace accounts and board data, including attachment bytes.
 
 Keep the contract copy under `web/src/api/contracts` synchronized when editing transport schemas.
+`contracts/board-columns.ts` is the single ordered array of board column IDs, labels and accents;
+task status validation derives from that list. The SQLite records store statuses as strings in task
+JSON, so adding or reordering a column requires no database migration. Keep existing IDs stable and
+add English copy in the Web board translation catalog when introducing a new label.

@@ -1,13 +1,9 @@
 import { z } from "zod";
 
-export const taskStatuses = [
-  "backlog",
-  "clarification",
-  "queue",
-  "inProgress",
-  "review",
-  "done",
-] as const;
+import { taskStatuses } from "./board-columns.js";
+
+export { boardColumns, taskStatuses } from "./board-columns.js";
+export type { BoardColumn, TaskStatus } from "./board-columns.js";
 
 export const tagTones = ["violet", "green", "amber", "blue", "rose"] as const;
 
