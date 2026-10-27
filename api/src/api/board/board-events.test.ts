@@ -82,8 +82,6 @@ beforeEach(async () => {
   const config = parseInternalTasksEnvironment({
     ...localAuthTestEnvironment,
     OPERATIONS_AGENT_PUBLIC_URL: origin,
-    OPERATIONS_AGENT_WORKER_URL: "http://127.0.0.1:1",
-    OPERATIONS_AGENT_WORKER_TOKEN: "x".repeat(32),
   });
   cookie = `amazi_operations_session=${localAdminCookieToken(config)}`;
   application = createApplication(config, database);

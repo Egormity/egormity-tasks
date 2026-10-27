@@ -26,9 +26,6 @@ class DatabaseTransferTest(unittest.TestCase):
             CREATE TABLE task_comments (
                 id TEXT PRIMARY KEY, cardId TEXT REFERENCES task_cards(id), data TEXT NOT NULL
             );
-            CREATE TABLE task_chat_links (
-                taskId TEXT PRIMARY KEY REFERENCES task_cards(id), chatId TEXT UNIQUE, createdAt TEXT
-            );
         """)
         content = b"attachment\x00\xff\n"
         digest = hashlib.sha256(content).hexdigest()
@@ -45,10 +42,6 @@ class DatabaseTransferTest(unittest.TestCase):
             "INSERT INTO task_comments VALUES (?, ?, ?)",
             ("comment", "task", json.dumps({"text": "Comment", "attachments": []})),
         )
-        self.live.execute(
-            "INSERT INTO task_chat_links VALUES (?, ?, ?)",
-            ("task", "native-chat", "2026-10-18T00:00:00Z"),
-        )
         self.live.commit()
 
     def test_live_wal_snapshot_and_sql_restore_preserve_all_data(self) -> None:
@@ -63,8 +56,8 @@ class DatabaseTransferTest(unittest.TestCase):
             self.assertEqual(destination.stat().st_mode & 0o777, 0o600)
             with closing(sqlite3.connect(destination)) as database:
                 self.assertEqual(
-                    database.execute("SELECT chatId FROM task_chat_links").fetchone(),
-                    ("native-chat",),
+                    database.execute("SELECT cardId FROM task_comments").fetchone(),
+                    ("task",),
                 )
                 self.assertEqual(
                     database.execute("SELECT bytes FROM task_files").fetchone(),

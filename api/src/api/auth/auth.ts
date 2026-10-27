@@ -105,18 +105,18 @@ export class UserAuthentication {
     return user;
   };
 
-  requireAuthenticated = async (request: Request, response: Response, next: NextFunction) => {
+  requireAuthenticated = (request: Request, response: Response, next: NextFunction) => {
     try {
-      response.locals.user = await this.verify(request);
+      response.locals.user = this.verify(request);
       next();
     } catch (error) {
       next(error);
     }
   };
 
-  requireAdmin = async (request: Request, response: Response, next: NextFunction) => {
+  requireAdmin = (request: Request, response: Response, next: NextFunction) => {
     try {
-      const user = await this.verify(request);
+      const user = this.verify(request);
       if (user.role !== "admin") throw new HttpError(403, "Admin access is required.");
       response.locals.user = user;
       next();
@@ -125,7 +125,7 @@ export class UserAuthentication {
     }
   };
 
-  login = async (request: Request, response: Response) => {
+  login = (request: Request, response: Response) => {
     const now = Date.now();
     for (const [key, value] of this.attempts) if (value.reset <= now) this.attempts.delete(key);
     for (const [key, expiry] of this.revoked) if (expiry <= now) this.revoked.delete(key);

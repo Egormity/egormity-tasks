@@ -19,8 +19,6 @@ export type TaskTag = {
 };
 
 export type Task = {
-  readonly agentChatId?: string | undefined;
-  readonly agentVerdict?: string | null | undefined;
   readonly revision?: number | undefined;
   readonly archivedAt: string | null;
   readonly assignee?: string | undefined;
@@ -52,7 +50,7 @@ export type TrackerEventChange =
       readonly toLabel?: string | undefined;
     }
   | {
-      readonly field: "title" | "description" | "priority" | "order" | "agentVerdict";
+      readonly field: "title" | "description" | "priority" | "order";
       readonly from: number | string | null;
       readonly to: number | string | null;
     }

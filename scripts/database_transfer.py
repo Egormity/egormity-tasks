@@ -44,7 +44,6 @@ def inspect_database(path: Path) -> dict[str, Any]:
             "task_cards",
             "task_files",
             "task_comments",
-            "task_chat_links",
         }.issubset(tables):
             raise ValueError("Expected the Internal Tasks board schema")
         counts: dict[str, int] = {}
@@ -129,7 +128,6 @@ def export_database(source: Path, output: Path) -> dict[str, Any]:
             path.name: {"sha256": checksum(path), "bytes": path.stat().st_size}
             for path in (snapshot, dump)
         },
-        "chatHistory": "Native Codex history remains on Gateway; board chat links are preserved.",
     }
     manifest_path = output / "manifest.json"
     manifest_path.write_text(json.dumps(manifest, indent=2) + "\n")

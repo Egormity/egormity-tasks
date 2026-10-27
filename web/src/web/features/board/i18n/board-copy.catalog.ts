@@ -12,8 +12,6 @@ export const boardEnglish: Readonly<Record<string, string>> = {
   "Прикрепить файл": "Attach file",
   "Отправить комментарий": "Send comment",
   "Добавлен комментарий": "Comment added",
-  "Новый чат": "New conversation",
-  "Выбрать существующий чат": "Choose existing chat",
   "Экспортировать все задачи колонки «{0}»": "Export all tasks in “{0}”",
   "Подготовка архива…": "Preparing archive…",
   "Экспортировать все": "Export all",
@@ -209,12 +207,4 @@ export const boardEnglish: Readonly<Record<string, string>> = {
   Низкий: "Low",
   Средний: "Medium",
   Высокий: "High",
-  "Обсудить с агентом": "Discuss with agent",
-  "Обсудить задачу с агентом: {0}": "Discuss task with agent: {0}",
-  "Вердикт агента": "Agent verdict",
-  "Вердикт агента готов": "Agent verdict available",
-  "Пока не оценена": "Not assessed yet",
-  "Обсуждение с агентом": "Discussion in progress",
-  "Обсудите задачу с агентом, чтобы получить вердикт.":
-    "Discuss the task with the agent to get a verdict.",
 };

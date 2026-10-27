@@ -1,35 +1,34 @@
 # API application
 
-This standalone Amazi application owns local administrator authentication, the task-board API,
-attachment storage, SQLite, and an optional HTTP relay to the separately hosted Gateway worker.
-The API stays useful for sign-in and board management when Gateway settings are absent.
+This standalone Amazi application owns local accounts, administrator and manager sessions, the task
+board, comments, attachment storage and SQLite. Task changes publish board events over SSE.
 
 ## Code map
 
-| Directory            | Responsibility                                                                           |
-| -------------------- | ---------------------------------------------------------------------------------------- |
-| `src/api/auth`       | Scrypt password verification, signed administrator sessions, optional work confirmations |
-| `src/api/board`      | SQLite schema/store, task/tag/comment/file routes, and board event stream                |
-| `src/api/task-agent` | Board-to-Gateway context, chat associations, and scoped task verdicts                    |
-| `src/api/relay`      | Allowlisted streaming HTTP relay when a Gateway worker is configured                     |
-| `src/api/contracts`  | API transport schemas and Web-shared contracts                                           |
+| Directory           | Responsibility                                                                  |
+| ------------------- | ------------------------------------------------------------------------------- |
+| `src/api/auth`      | Scrypt passwords, signed sessions, account roles and admin-only user management |
+| `src/api/board`     | SQLite stores, task/tag/comment/file routes, imports and board event stream     |
+| `src/api/contracts` | API-owned transport schemas copied to Web                                       |
 
-`src/api/main.ts` reads configuration and opens `/data/chats.sqlite`; the production image declares
-`/data` as a durable volume owned by the runtime's numeric UID/GID 65532. `src/api/app.ts` composes the
-HTTP routes and security checks. Tests are kept beside their implementation.
+`src/api/main.ts` reads configuration and opens `chats.sqlite` in the configured data directory.
+`src/api/app.ts` composes the HTTP routes and security checks. Tests live beside their implementation.
 
-## Local authorization
+## Configuration
 
-The API does not use Amazi `/auth/token` or `/auth/session`. Configure these API-only environment
-values instead:
+Configure these API-only environment values:
 
 - `OPERATIONS_AGENT_LOCAL_ADMIN_EMAIL`
 - `OPERATIONS_AGENT_LOCAL_ADMIN_NAME`
 - `OPERATIONS_AGENT_LOCAL_ADMIN_PASSWORD_HASH` — base64url salt and scrypt hash separated by `.`
-- `OPERATIONS_AGENT_LOCAL_SESSION_SECRET` — random signing secret, at least 32 characters
+- `OPERATIONS_AGENT_LOCAL_SESSION_SECRET` — signing secret with at least 32 characters
+- `OPERATIONS_AGENT_PUBLIC_URL` — public browser origin for mutation checks
+- `OPERATIONS_AGENT_DATA_DIRECTORY` — optional; defaults to `/data` in production and `.runtime/data` locally
+- `PORT` or `OPERATIONS_AGENT_PORT` — optional listener port, default `3010`
 
-Login throttling, secure HttpOnly/SameSite cookies, session expiry, logout revocation, same-origin
-mutation checks, and administrator-only API routes remain enforced locally.
+The legacy environment prefix is retained for deployment compatibility. Authentication, board storage
+and user management use these settings directly. Login throttling, HttpOnly/SameSite cookies, session
+expiry, logout revocation, same-origin mutation checks and administrator-only account routes are enforced locally.
 
-Gateway functionality is activated only when both `OPERATIONS_AGENT_WORKER_URL` and
-`OPERATIONS_AGENT_WORKER_TOKEN` are present. Do not configure a separate worker application here.
+Run `npm ci`, then `npm run dev` from `api/`. Use `npm run typecheck`, `npm run lint`, `npm test` and
+`npm run build` for validation.

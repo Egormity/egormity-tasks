@@ -20,7 +20,6 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 const isEventChange = (value: unknown): value is TrackerEventChange => {
   if (!isRecord(value) || typeof value.field !== "string") return false;
   return [
-    "agentVerdict",
     "attachments",
     "description",
     "order",

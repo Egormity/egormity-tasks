@@ -3,7 +3,7 @@ import prettier from "eslint-config-prettier";
 import tseslint from "typescript-eslint";
 
 export default tseslint.config(
-  { ignores: ["**/dist/**", "**/node_modules/**", "**/codex/**", "**/fixtures/**"] },
+  { ignores: ["**/dist/**", "**/node_modules/**", "**/fixtures/**"] },
   { ...eslint.configs.recommended, files: ["**/*.{ts,tsx}"] },
   ...tseslint.configs.recommendedTypeChecked.map((config) => ({
     ...config,

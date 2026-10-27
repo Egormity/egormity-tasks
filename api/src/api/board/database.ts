@@ -1,6 +1,6 @@
 import { DatabaseSync } from "node:sqlite";
 
-/** The board owns this database. Codex threads stay entirely on Gateway. */
+/** SQLite storage for board content and workspace accounts. */
 export class BoardDatabase {
   readonly db: DatabaseSync;
   constructor(path: string) {

@@ -13,6 +13,7 @@ import type {
 
 import { HttpError } from "../auth/auth.js";
 import { CommentStore } from "./comments/comment-store.js";
+import { taskSchema } from "../contracts/board.js";
 
 export class BoardStore {
   readonly comments: CommentStore;
@@ -46,7 +47,7 @@ export class BoardStore {
     this.db
       .prepare("SELECT data FROM task_cards")
       .all()
-      .map((row) => JSON.parse(String(row.data)) as Task)
+      .map((row) => taskSchema.parse(JSON.parse(String(row.data))))
       .sort(
         (a, b) =>
           a.order - b.order ||
@@ -65,7 +66,7 @@ export class BoardStore {
   get = (id: string): Task => {
     const row = this.db.prepare("SELECT data FROM task_cards WHERE id = ?").get(id);
     if (!row) throw new HttpError(404, "Task not found.");
-    return JSON.parse(String(row.data)) as Task;
+    return taskSchema.parse(JSON.parse(String(row.data)));
   };
 
   save = (card: Task) =>

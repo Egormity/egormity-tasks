@@ -23,23 +23,9 @@
 }
 
 @layer components {
-  .scroll-area,
-  .agent-content pre {
+  .scroll-area {
     scrollbar-width: thin;
     scrollbar-color: var(--color-line) transparent;
-  }
-
-  .agent-content {
-    min-width: 0;
-    overflow-wrap: anywhere;
-  }
-
-  .agent-content pre {
-    min-width: 0;
-    max-width: 100%;
-    overflow-x: auto;
-    overflow-y: hidden;
-    overflow-wrap: normal;
   }
 }
 

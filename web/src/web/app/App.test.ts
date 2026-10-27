@@ -51,20 +51,6 @@ beforeEach(() => {
         };
       if (path === "/api/board") body = { cards: [], tags: [] };
       if (path === "/api/users") body = [];
-      if (path.startsWith("/api/snapshot"))
-        body = {
-          chats: [],
-          detail: null,
-          status: {
-            busy: true,
-            authenticated: true,
-            activeChatId: "another-chat",
-            externalTurns: [],
-            canStop: true,
-            loginRunning: false,
-            loginOutput: "",
-          },
-        };
       return Promise.resolve(
         new Response(JSON.stringify(body), { headers: { "Content-Type": "application/json" } }),
       );
@@ -88,16 +74,16 @@ const render = async () => {
   });
 };
 
-it("renders both localized pages, persists preferences and allows messages while busy", async () => {
+it("renders the localized board and users pages and persists preferences", async () => {
   localStorage.setItem(
     policy.preferencesStorageKey,
     JSON.stringify({ locale: "ru", theme: "light" }),
   );
   await render();
   expect(host.querySelector('a[href="/tasks"]')?.textContent).toBe("Задачи");
-  expect(host.querySelector('a[href="/agent"]')?.textContent).toBe("Amazi Агент");
+  expect(host.querySelectorAll("nav a")).toHaveLength(2);
   expect(host.querySelector("h1")?.textContent).toBe("Доска");
-  expect(paths.some((path) => path.includes("snapshot"))).toBe(false);
+  expect(paths).toContain("/api/board");
   const language = host.querySelectorAll("select")[0]!;
   const theme = host.querySelectorAll("select")[1]!;
   await settle(() => {
@@ -116,14 +102,12 @@ it("renders both localized pages, persists preferences and allows messages while
     theme: "dark",
   });
   await settle(() => {
-    host.querySelector<HTMLAnchorElement>('a[href="/agent"]')!.click();
+    host.querySelector<HTMLAnchorElement>('a[href="/users"]')!.click();
   });
-  expect(location.pathname).toBe("/agent");
+  expect(location.pathname).toBe("/users");
   expect(location.hash).toBe("");
-  expect(host.querySelector('a[aria-current="page"]')?.textContent).toBe("Amazi Agent");
-  expect(host.querySelector("textarea")?.disabled).toBe(false);
-  expect(host.querySelector('button[aria-label="Send message"]')).not.toBeNull();
-  expect(host.querySelector('[aria-label="Stop task"]')).toBeNull();
+  expect(host.querySelector('a[aria-current="page"]')?.textContent).toBe("Users");
+  expect(host.querySelector("h1")?.textContent).toBe("Users");
   await settle(() => root.unmount());
   root = createRoot(host);
   await render();
@@ -168,3 +152,16 @@ it("opens the direct users URL for admins and sends managers away from it", asyn
   expect(host.querySelector('a[href="/users"]')).toBeNull();
   expect(host.querySelector("h1")?.textContent).not.toBe("Users");
 });
+
+it.each(["/agent", "/tasks?task=former-discussion&new=1"])(
+  "shows the board for a retired workspace URL: %s",
+  async (href) => {
+    history.replaceState(null, "", href);
+    await render();
+    expect(host.querySelector("h1")?.textContent).toBe("Board");
+    expect(paths.every((path) => ["/api/session", "/api/board"].includes(path))).toBe(true);
+    expect(
+      Array.from(host.querySelectorAll("nav a"), (link) => link.getAttribute("href")),
+    ).toEqual(["/tasks", "/users"]);
+  },
+);

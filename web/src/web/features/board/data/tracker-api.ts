@@ -72,17 +72,14 @@ export const getTrackerSnapshot = async (signal?: AbortSignal) => {
 };
 
 export const selectTrackerCards = (
-  board: BoardSnapshot & Pick<LiveBoardSnapshot, "taskChats">,
+  board: BoardSnapshot,
   scope: "active" | "archived",
   query: string,
 ) => {
   const search = query.trim().toLocaleLowerCase();
   return {
     items: board.cards
-      .map((card) => ({
-        ...toTrackerTask(card, board.tags),
-        agentChatId: board.taskChats?.find((link) => link.taskId === card.id)?.chatId,
-      }))
+      .map((card) => toTrackerTask(card, board.tags))
       .filter(
         (card) =>
           Boolean(card.archivedAt) === (scope === "archived") &&

@@ -25,21 +25,25 @@ beforeEach(() => {
   users = [admin];
   vi.stubGlobal(
     "fetch",
-    vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
-      const url = String(input);
-      const body = init?.body ? (JSON.parse(String(init.body)) as Omit<User, "id">) : undefined;
+    vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url =
+        typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+      const body =
+        typeof init?.body === "string"
+          ? (JSON.parse(init.body) as Omit<User, "id">)
+          : undefined;
       if (url === "/api/users" && init?.method === "POST" && body) {
-        const created = { ...body, id: "22222222-2222-4222-8222-222222222222" } as User;
+        const created = { ...body, id: "22222222-2222-4222-8222-222222222222" };
         users = [...users, created];
-        return Response.json(created, { status: 201 });
+        return Promise.resolve(Response.json(created, { status: 201 }));
       }
       if (url.startsWith("/api/users/") && init?.method === "POST" && body) {
         const id = url.slice("/api/users/".length);
-        const updated = { ...body, id } as User;
+        const updated = { ...body, id };
         users = users.map((user) => (user.id === id ? updated : user));
-        return Response.json(updated);
+        return Promise.resolve(Response.json(updated));
       }
-      return Response.json(users);
+      return Promise.resolve(Response.json(users));
     }),
   );
 });

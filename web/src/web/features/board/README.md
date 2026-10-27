@@ -18,31 +18,16 @@ copy; `board-theme.css` gives the original colors named tokens and dark equivale
 component dimensions are retained deliberately. Application navigation and appearance/language
 controls belong to the Operations sidebar; archive navigation stays within Tasks.
 Task view omits the attachment section when the task has no attachments.
-The card's full-height left agent rail opens `discussion/TaskDiscussion.tsx`, replacing the board with task
-details and the shared `AgentPage` conversation. The details collapse on phones. Task view includes
-the chat navigation and an **Agent verdict** section. Creating or choosing a replacement chat remains
-in the discussion sidebar. The rail is grey without a chat, blue during discussion, and green with a
-check once `agentVerdict` contains text. Linked discussion is distinct from native turn activity.
-The agent saves an assessment through its scoped Gateway helper; the API owns the verdict field,
-revision validation, history event and SSE invalidation. The drag handle is independent on the right.
-The details sidebar's **Open task** button opens the regular task dialog without unmounting the chat.
-`editor/use-task-editor.tsx` shares its view/edit, history, attachment, tag, archive and export actions between
-the board and discussion workspace. The button is also available when mobile task details are collapsed.
-Only one native chat can be associated with a task. A new discussion remains an ID-less draft until
-its first confirmed message succeeds; choosing another existing chat replaces only the association.
-The previous native conversation remains available in the general chat list. The agent retrieves
-task references over its configured Main SSH access, following the shared instructions; no button
-copies task files into the chat composer. No board action starts Codex automatically.
-The task ID, title and permalink are pinned above the composer and prepended to every confirmed
-message. The editable draft contains only the user's text. Task details show status, tags, description,
-attachments and verdict; both embedded and general chats share model controls and thread-scoped activity.
+Opening a card shows its details, comments, attachments, tags and event history in the task dialog.
+`editor/use-task-editor.tsx` owns view/edit, archive and export actions. The drag handle remains
+independent on the right.
 On phones the toolbar wraps below the heading and task search remains available at full width.
 Columns keep their horizontal board scrolling; the page navigation moves into the shared hamburger menu.
 
 ## Live updates
 
 The board has no polling. One authenticated `/api/board/events` SSE connection publishes an opaque
-version after successful API writes to cards, tags, attachments or chat associations. `/api/board` returns that same
+version after successful API writes to cards, tags, attachments or comments. `/api/board` returns that same
 version with its snapshot. The initial SSE notification closes the subscribe/read race; reconnecting
 resynchronizes only when the version differs from the cached snapshot. A server restart changes it.
 Heartbeat comments keep proxies open and do not trigger reads. The stream reconnects every minute

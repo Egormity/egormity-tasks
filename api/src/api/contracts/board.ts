@@ -1,5 +1,4 @@
 import { z } from "zod";
-import type { TaskChatLink } from "./task-agent.js";
 
 export const taskStatuses = [
   "backlog",
@@ -47,16 +46,17 @@ export const taskInputSchema = z
   })
   .strict();
 
-export const taskSchema = taskInputSchema.extend({
-  agentVerdict: z.string().max(8000).nullable().optional(),
-  id,
-  order: z.number().int().nonnegative(),
-  archivedAt: z.iso.datetime().nullable(),
-  createdAt: z.iso.datetime(),
-  updatedAt: z.iso.datetime(),
-  attachments: z.array(attachmentSchema),
-  revision: z.number().int().positive(),
-});
+export const taskSchema = taskInputSchema
+  .extend({
+    id,
+    order: z.number().int().nonnegative(),
+    archivedAt: z.iso.datetime().nullable(),
+    createdAt: z.iso.datetime(),
+    updatedAt: z.iso.datetime(),
+    attachments: z.array(attachmentSchema),
+    revision: z.number().int().positive(),
+  })
+  .strip();
 
 export const taskUpdateSchema = taskInputSchema
   .partial()
@@ -114,7 +114,4 @@ export type BoardSnapshot = { cards: Task[]; tags: TaskTag[] };
 
 export const boardChangeSchema = z.object({ version: z.string().uuid() });
 
-export type LiveBoardSnapshot = BoardSnapshot &
-  z.infer<typeof boardChangeSchema> & {
-    taskChats?: TaskChatLink[];
-  };
+export type LiveBoardSnapshot = BoardSnapshot & z.infer<typeof boardChangeSchema>;

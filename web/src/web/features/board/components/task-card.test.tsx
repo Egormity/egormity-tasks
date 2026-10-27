@@ -56,20 +56,4 @@ describe("TaskCard drag handle", () => {
     expect(screen.getByText("Frontend")).toBeTruthy();
     if (withAttachment) expect(screen.getByLabelText("1 вложений")).toBeTruthy();
   });
-
-  it.each([null, "Requirements reviewed"])(
-    "exposes the actual agent verdict state: %s",
-    (agentVerdict) => {
-      render(<TaskCard task={{ ...task, agentVerdict }} />);
-      expect(screen.getByRole("link").title).toContain(
-        agentVerdict ? "Вердикт агента готов" : "Пока не оценена",
-      );
-      expect(screen.getByRole("link").getAttribute("href")).toBe("/tasks?task=task-1");
-    },
-  );
-
-  it("marks a linked discussion before its verdict is ready", () => {
-    render(<TaskCard task={{ ...task, agentChatId: "existing-chat" }} />);
-    expect(screen.getByRole("link").title).toContain("Обсуждение с агентом");
-  });
 });

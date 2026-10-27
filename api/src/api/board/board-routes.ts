@@ -13,10 +13,9 @@ import {
 import { HttpError } from "../auth/auth.js";
 import type { BoardStore } from "./board-store.js";
 import type { BoardEvents } from "./board-events.js";
-import type { TaskChatStore } from "../task-agent/task-chat-store.js";
 import { commentRoutes } from "./comments/comment-routes.js";
 
-export const boardRoutes = (store: BoardStore, events: BoardEvents, chats: TaskChatStore) => {
+export const boardRoutes = (store: BoardStore, events: BoardEvents) => {
   const router = Router();
   router.use(commentRoutes(store, events));
   const actor = (response: Response) => (response.locals.user as { name: string }).name;
@@ -32,7 +31,7 @@ export const boardRoutes = (store: BoardStore, events: BoardEvents, chats: TaskC
   };
   router.get("/events", events.subscribe);
   router.get("/", (_request, response) =>
-    response.json({ ...store.snapshot(), version: events.version, taskChats: chats.list() }),
+    response.json({ ...store.snapshot(), version: events.version }),
   );
   router.post("/cards", (request, response) =>
     response

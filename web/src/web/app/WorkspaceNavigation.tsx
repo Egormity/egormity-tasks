@@ -8,24 +8,19 @@ import { AppLink } from "./AppLink";
 
 type NavigationProps = {
   user: User;
-  page: "tasks" | "agent" | "users";
-  agentHref: string;
+  page: "tasks" | "users";
   onLogout: () => void;
 };
 
 const NavigationContent = ({
   user,
   page,
-  agentHref,
   onLogout,
   onNavigate,
   closeControl,
 }: NavigationProps & { onNavigate?: () => void; closeControl?: ReactNode }) => {
   const { copy } = usePreferences();
-  const pages =
-    user.role === "admin"
-      ? (["tasks", "agent", "users"] as const)
-      : (["tasks", "agent"] as const);
+  const pages = user.role === "admin" ? (["tasks", "users"] as const) : (["tasks"] as const);
   return (
     <>
       <div className="flex items-start justify-between gap-2">
@@ -39,7 +34,7 @@ const NavigationContent = ({
         {pages.map((item) => (
           <AppLink
             key={item}
-            href={item === "agent" ? agentHref : item === "users" ? "/users" : "/tasks"}
+            href={item === "users" ? "/users" : "/tasks"}
             aria-current={page === item ? "page" : undefined}
             onClick={onNavigate}
             className={`rounded-lg px-4 py-3 text-sm font-medium ${page === item ? "bg-selected text-accent" : "text-muted hover:bg-canvas"}`}

@@ -9,11 +9,9 @@ import { defineConfig } from "vite";
 
 const previewHost = process.env.AMAZI_PREVIEW_HOST;
 const apiTarget =
-  process.env.OPERATIONS_AGENT_WEB_API_TARGET ??
-  `http://127.0.0.1:${internalTasksPolicy.port}`;
+  process.env.OPERATIONS_AGENT_WEB_API_TARGET ?? `http://127.0.0.1:${internalTasksPolicy.port}`;
 const publicUrl =
-  process.env.OPERATIONS_AGENT_PUBLIC_URL ??
-  `http://localhost:${internalTasksPolicy.port}`;
+  process.env.OPERATIONS_AGENT_PUBLIC_URL ?? `http://localhost:${internalTasksPolicy.port}`;
 
 export default defineConfig({
   base: internalTasksPolicy.basePath,
@@ -35,7 +33,7 @@ export default defineConfig({
       "127.0.0.1",
       ...(previewHost ? [previewHost] : []),
     ],
-    // New chats create Git worktrees here. Their tsconfig/index files must not reload this UI.
+    // Runtime data changes must not reload the browser UI.
     watch: { ignored: ["**/.runtime/**"] },
     proxy: {
       [internalTasksPolicy.apiPath]: {

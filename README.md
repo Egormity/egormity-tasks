@@ -1,28 +1,25 @@
 # Egormity Tasks
 
-Egormity Tasks is split into exactly two Amazi applications. `web/` is the browser client; `api/`
-owns administrator authorization, the task board, SQLite storage, and the optional Gateway relay.
-There is no third application or duplicate root-level application source tree.
+Egormity Tasks has two independent Amazi applications: `web/` provides the browser interface;
+`api/` owns authentication, workspace accounts, the task board and SQLite storage.
 
-| Application | Source root | Responsibility                                                                         |
-| ----------- | ----------- | -------------------------------------------------------------------------------------- |
-| Web         | `web/`      | React interface, sign-in screen, board, and same-origin API proxy                      |
-| API         | `api/`      | Local administrator sessions, task and attachment APIs, SQLite, optional Gateway relay |
+| Application | Source root | Responsibility                                                                              |
+| ----------- | ----------- | ------------------------------------------------------------------------------------------- |
+| Web         | `web/`      | Sign-in, task board, comments, attachments, admin user management and same-origin API proxy |
+| API         | `api/`      | Local sessions, account roles, task/tag/comment/file APIs, SQLite and board events          |
 
-## Local administrator
+## Local accounts
 
-The API authenticates the locally configured administrator; it does not call an external identity
-service. The account is configured using API-only environment values. Passwords are stored as a
-scrypt verifier, and successful sign-in issues an HttpOnly, SameSite=Strict, signed session cookie.
-The initial login identifier is `admin@example`. Keep the plaintext password out of source files.
+The API authenticates local administrator and manager accounts. The initial administrator is configured
+with API-only environment values. Passwords use scrypt verifiers; successful sign-in issues an HttpOnly,
+SameSite=Strict signed session cookie. Administrators can manage accounts; both roles use the task board.
+Keep plaintext passwords and session secrets out of source files.
 
-## Data and optional Gateway
+## Data
 
-The task board and attachment bytes live in the API's SQLite database at `/data/chats.sqlite`.
-Gateway chat/agent routes are enabled only when both `OPERATIONS_AGENT_WORKER_URL` and
-`OPERATIONS_AGENT_WORKER_TOKEN` are configured. Without them, local sign-in and board management
-remain available; Gateway-dependent chat actions report that the worker is not configured. The
-Gateway worker is not an application in this project.
+Tasks, tags, comments, event history and attachment bytes live in the API's SQLite database at
+`/data/chats.sqlite` in production. Existing environment variable names and the database filename remain
+stable so current deployment configuration and data locations continue to work.
 
 ## App references
 

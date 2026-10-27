@@ -1,7 +1,6 @@
 import { Archive, Download, LoaderCircle, X } from "lucide-react";
 import { type ClipboardEvent, type FormEvent, useCallback, useState } from "react";
 import { useDropzone } from "react-dropzone";
-import { AgentVerdict, TaskAgentActions } from "@/features/board/discussion/task-agent-actions";
 
 import {
   Modal,
@@ -258,12 +257,6 @@ export const TaskEditorModal = ({
                     </section>
 
                     <aside className="min-w-0 space-y-7 lg:pl-7">
-                      {task && (
-                        <>
-                          <TaskAgentActions taskId={task.id} showManage={false} />
-                          <AgentVerdict verdict={task.agentVerdict} />
-                        </>
-                      )}
                       <TaskEditorTags
                         onConfigure={() => setTagManagerOpen(true)}
                         readOnly

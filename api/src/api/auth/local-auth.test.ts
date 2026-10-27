@@ -17,7 +17,7 @@ afterEach(async () => {
   if (server) await new Promise<void>((resolve) => server!.close(() => resolve()));
 });
 
-it("runs local admin and board routes without a Gateway worker, and revokes logout", async () => {
+it("runs local admin and board routes, and revokes logout", async () => {
   const config = parseInternalTasksEnvironment({
     ...localAuthTestEnvironment,
     OPERATIONS_AGENT_PUBLIC_URL: "https://tasks.example.test",
@@ -52,9 +52,29 @@ it("runs local admin and board routes without a Gateway worker, and revokes logo
   expect((await fetch(`${base}${internalTasksPolicy.apiPath}/board`, { headers })).status).toBe(
     200,
   );
-  expect(
-    (await fetch(`${base}${internalTasksPolicy.apiPath}/status`, { headers })).status,
-  ).toBe(503);
+  for (const path of [
+    "/status",
+    "/snapshot",
+    "/chats",
+    "/events",
+    "/board/cards/example/chats",
+    "/chats/example/task",
+    "/chats/example/messages",
+    "/codex/login",
+    "/confirmations",
+    "/confirmations/example/cancel",
+    "/requests/respond",
+    "/agent/tasks/example/verdict",
+  ]) {
+    const response = await fetch(`${base}${internalTasksPolicy.apiPath}${path}`, { headers });
+    expect(response.status, path).toBe(404);
+    expect(await response.json()).toEqual({ error: "Endpoint not found." });
+    const mutation = await fetch(`${base}${internalTasksPolicy.apiPath}${path}`, {
+      method: "POST",
+      headers: { ...headers, Origin: "https://tasks.example.test" },
+    });
+    expect(mutation.status, path).toBe(404);
+  }
 
   const logout = await fetch(`${base}${internalTasksPolicy.apiPath}/logout`, {
     method: "POST",

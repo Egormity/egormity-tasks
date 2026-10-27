@@ -6,7 +6,6 @@ import type { Task } from "@/features/board/data/task-data";
 
 import { boardText } from "@/features/board/i18n/board-copy";
 import { taskTagToneStyles } from "@/features/board/tags/task-tag-styles";
-import { TaskAgentRail } from "@/features/board/discussion/task-agent-rail";
 
 type TaskCardProps = {
   readonly dragDisabled?: boolean | undefined;
@@ -64,7 +63,7 @@ export const TaskCard = ({
 
   return (
     <article
-      className={`group bg-board-surface hover:border-board-card-border-hover hover:shadow-board-card relative min-h-24 rounded-xl border p-3.5 pl-14 transition ${
+      className={`group bg-board-surface hover:border-board-card-border-hover hover:shadow-board-card relative min-h-24 rounded-xl border p-3.5 transition ${
         isDragging
           ? "border-board-drag bg-board-drag/14 shadow-board-drag ring-board-drag/15 opacity-40 ring-2"
           : "border-board-card-border"
@@ -76,7 +75,6 @@ export const TaskCard = ({
       role={onOpen ? "button" : undefined}
       tabIndex={onOpen ? 0 : undefined}
     >
-      <TaskAgentRail task={task} overlay={isOverlay} />
       <div className="min-w-0">
         <div className="flex min-w-0 items-start gap-2">
           {isDone && (

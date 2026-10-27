@@ -13,7 +13,6 @@ import { WorkspaceNavigation } from "./WorkspaceNavigation";
 import { PreferencesProvider } from "@/shared/i18n/preferences";
 import { internalTasksPolicy } from "@contracts/policy.js";
 
-const agentHref = "/agent?chat=11111111-1111-4111-8111-111111111111";
 let desktop: {
   matches: boolean;
   addEventListener: ReturnType<typeof vi.fn>;
@@ -42,8 +41,7 @@ const mount = (role: "admin" | "manager" = "admin") =>
           email: "admin@example",
           role,
         }}
-        page="agent"
-        agentHref={agentHref}
+        page="tasks"
         onLogout={vi.fn()}
       />
       <textarea aria-label="Черновик" defaultValue="Не потерять сообщение" />
@@ -60,15 +58,15 @@ it("shows the users destination only for admins", () => {
   expect(screen.queryByRole("link", { name: "Пользователи" })).toBeNull();
 });
 
-it("opens the localized menu, retains the chat link and draft, and restores focus after Escape", async () => {
+it("opens the localized menu, retains the task link and input, and restores focus after Escape", async () => {
   mount();
   const trigger = screen.getByRole("button", { name: "Открыть меню" });
   trigger.focus();
   fireEvent.click(trigger);
   const menu = screen.getByRole("dialog", { name: "Страницы" });
   expect(menu.contains(document.activeElement)).toBe(true);
-  expect(within(menu).getByRole("link", { name: "Amazi Агент" }).getAttribute("href")).toBe(
-    agentHref,
+  expect(within(menu).getByRole("link", { name: "Задачи" }).getAttribute("href")).toBe(
+    "/tasks",
   );
   expect(within(menu).getByRole("combobox", { name: "Язык" })).toBeTruthy();
   expect(within(menu).getByRole("combobox", { name: "Тема" })).toBeTruthy();
@@ -94,7 +92,7 @@ it("closes after selecting even the current page and updates settings through th
   });
   expect(document.documentElement.lang).toBe("en");
   expect(document.documentElement.dataset.theme).toBe("dark");
-  fireEvent.click(within(menu).getByRole("link", { name: "Amazi Agent" }));
+  fireEvent.click(within(menu).getByRole("link", { name: "Tasks" }));
   await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
 });
 

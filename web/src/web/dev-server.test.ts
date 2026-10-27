@@ -12,9 +12,9 @@ const isFullReload = (payload: unknown) =>
   "type" in payload &&
   payload.type === "full-reload";
 
-it("keeps chat workspace creation out of Vite reloads while still reloading edited web pages", async () => {
+it("keeps runtime data creation out of Vite reloads while still reloading edited web pages", async () => {
   const root = await mkdtemp(join(tmpdir(), "tasks-vite-watch-"));
-  await writeFile(join(root, "index.html"), "<html><body>Chat</body></html>");
+  await writeFile(join(root, "index.html"), "<html><body>Tasks</body></html>");
   const server = await createServer({
     ...config,
     configFile: false,
@@ -30,10 +30,10 @@ it("keeps chat workspace creation out of Vite reloads while still reloading edit
     if (!address || typeof address === "string") throw Error("Missing fixture address");
     await fetch(`http://127.0.0.1:${address.port}/`);
     await delay(100);
-    const workspace = join(root, ".runtime/operations-agent/worktrees/new-chat/apps/web");
+    const workspace = join(root, ".runtime/data");
     await mkdir(workspace, { recursive: true });
     await writeFile(join(workspace, "tsconfig.json"), "{}");
-    await writeFile(join(workspace, "index.html"), "<html>Agent workspace</html>");
+    await writeFile(join(workspace, "index.html"), "<html>Runtime fixture</html>");
     await delay(500);
     expect(send.mock.calls.filter(([payload]) => isFullReload(payload))).toEqual([]);
     await writeFile(join(root, "index.html"), "<html><body>Changed web page</body></html>");

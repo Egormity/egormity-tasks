@@ -13,7 +13,6 @@ const statusLabels: Record<string, string> = {
 };
 
 const fieldLabels: Record<string, string> = {
-  agentVerdict: "Вердикт агента",
   attachments: "Вложения",
   description: "Описание",
   order: "Порядок",
