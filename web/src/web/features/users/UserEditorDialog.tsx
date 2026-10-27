@@ -57,7 +57,7 @@ export const UserEditorDialog = ({
           <input
             autoComplete="new-password"
             className="border-line bg-canvas text-ink focus-visible:border-accent focus-visible:ring-accent rounded-lg border px-2.5 py-1.5 outline-none focus-visible:ring-1"
-            minLength={12}
+            minLength={5}
             onChange={(event) => setPassword(event.target.value)}
             required={!user}
             type="password"

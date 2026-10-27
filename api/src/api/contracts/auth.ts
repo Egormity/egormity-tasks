@@ -17,11 +17,11 @@ const userFieldsSchema = z.object({
 });
 
 export const createUserRequestSchema = userFieldsSchema.extend({
-  password: z.string().min(12).max(1024),
+  password: z.string().min(5).max(1024),
 });
 
 export const updateUserRequestSchema = userFieldsSchema.extend({
-  password: z.string().min(12).max(1024).optional(),
+  password: z.string().min(5).max(1024).optional(),
 });
 
 export const loginRequestSchema = z.object({
