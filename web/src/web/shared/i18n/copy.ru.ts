@@ -3,7 +3,6 @@ import type { Copy } from "./copy";
 export const ru: Copy = {
   brand: "Amazi",
   title: "Рабочее пространство",
-  subtitle: "Задачи и разработка",
   loginTitle: "С возвращением",
   loginDescription: "Войдите с учётной записью рабочего пространства.",
   email: "Электронная почта",
@@ -31,8 +30,6 @@ export const ru: Copy = {
   emptyUsers: "Пользователей пока нет.",
   retry: "Повторить",
   navigation: "Страницы",
-  openMenu: "Открыть меню",
-  closeMenu: "Закрыть меню",
   language: "Язык",
   theme: "Тема",
   light: "Светлая",

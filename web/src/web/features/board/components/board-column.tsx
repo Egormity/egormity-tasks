@@ -40,39 +40,49 @@ export const BoardColumn = ({
     <section
       ref={ref}
       data-board-column-id={column.id}
-      className={`bg-board-column-surface flex min-w-[250px] flex-1 flex-col overflow-hidden rounded-xl border transition ${
+      className={`bg-board-column-surface flex min-w-[180px] flex-1 flex-col overflow-hidden border-r transition-colors ${
         insertionBeforeId !== undefined
           ? "border-board-drop-border bg-board-drop-surface"
           : "border-board-column-border"
       }`}
     >
       <div
-        className="h-1 shrink-0 rounded-t-xl"
+        className="h-0.5 shrink-0"
         data-column-accent={column.id}
         style={{ backgroundColor: column.accent }}
       />
-      <header className="flex shrink-0 flex-col items-stretch gap-3 px-4 pt-5 pb-4">
-        <div className="flex items-center gap-2">
-          <h2 className="text-board-column-title text-[15px] font-semibold">
+      <header className="border-board-column-border flex h-9 shrink-0 items-center gap-1.5 border-b px-2">
+        <div className="flex min-w-0 flex-1 items-center gap-1.5">
+          <h2
+            title={boardText(column.label)}
+            className="text-board-column-title truncate text-[11px] font-semibold"
+          >
             {boardText(column.label)}
           </h2>
-          <span className="bg-board-count-surface text-board-count rounded-md px-2 py-0.5 text-[11px] font-semibold">
+          <span className="bg-board-count-surface text-board-count shrink-0 rounded-sm px-1.5 py-0.5 text-[10px] tabular-nums">
             {tasks.length}
           </span>
         </div>
         <button
-          aria-label={boardText("Экспортировать все задачи колонки «{0}»", column.label)}
-          className="border-board-button-border bg-board-surface text-board-button-text hover:border-board-button-border-hover hover:bg-board-button-hover inline-flex min-h-9 items-center justify-center gap-2 rounded-lg border px-3 text-xs font-medium transition disabled:cursor-not-allowed disabled:opacity-50"
+          aria-label={boardText(
+            "Экспортировать все задачи колонки «{0}»",
+            boardText(column.label),
+          )}
+          title={boardText(isExporting ? "Подготовка архива…" : "Экспортировать все")}
+          aria-busy={isExporting}
+          className="text-board-icon hover:bg-board-selected grid size-6 shrink-0 place-items-center rounded-sm transition-colors disabled:cursor-not-allowed disabled:opacity-30"
           disabled={exportDisabled || exportTaskCount === 0}
           onClick={onExportAll}
           type="button"
         >
-          <Download aria-hidden="true" className="size-3.5" />
-          {isExporting ? boardText("Подготовка архива…") : boardText("Экспортировать все")}
+          <Download
+            aria-hidden="true"
+            className={`size-3 ${isExporting ? "animate-pulse" : ""}`}
+          />
         </button>
       </header>
 
-      <div className="relative flex flex-1 flex-col gap-3 px-3 pb-3">
+      <div className="relative flex flex-1 flex-col gap-1.5 p-1.5">
         {tasks.length > 0 ? (
           tasks.map((task, index) => (
             <div className="relative" key={task.id}>
@@ -84,7 +94,7 @@ export const BoardColumn = ({
             </div>
           ))
         ) : (
-          <div className="border-board-empty-border text-board-subtle relative grid min-h-24 flex-1 place-items-center rounded-xl border border-dashed px-4 text-center text-xs">
+          <div className="text-board-subtle relative grid min-h-16 place-items-center px-2 py-4 text-center text-[11px]">
             {insertionBeforeId === null && <DropIndicator />}
             {boardText("Нет подходящих задач")}
           </div>
@@ -98,6 +108,6 @@ const DropIndicator = ({ after = false }: { readonly after?: boolean }) => (
   <span
     aria-hidden="true"
     data-board-drop-indicator=""
-    className={`bg-board-drag pointer-events-none absolute inset-x-0 z-10 h-0.5 rounded-full ${after ? "-bottom-1.5" : "-top-1.5"}`}
+    className={`bg-board-drag pointer-events-none absolute inset-x-0 z-10 h-0.5 ${after ? "-bottom-1" : "-top-1"}`}
   />
 );

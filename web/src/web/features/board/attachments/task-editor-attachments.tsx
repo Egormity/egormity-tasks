@@ -22,10 +22,10 @@ export const TaskEditorAttachments = ({
   onRemove,
 }: TaskEditorAttachmentsProps) => {
   return (
-    <section aria-labelledby="task-attachments-heading" className="space-y-2.5">
+    <section aria-labelledby="task-attachments-heading" className="space-y-2">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h2 className="text-board-text text-sm font-semibold" id="task-attachments-heading">
+          <h2 className="text-board-text text-xs font-medium" id="task-attachments-heading">
             {boardText("Вложения")}
           </h2>
           <p className="text-board-subtle mt-0.5 text-xs">
@@ -33,7 +33,7 @@ export const TaskEditorAttachments = ({
           </p>
         </div>
         <button
-          className="border-board-button-border bg-board-surface text-board-button-text hover:border-board-button-border-hover hover:bg-board-button-hover focus-visible:ring-board-accent inline-flex min-h-9 shrink-0 items-center gap-2 rounded-lg border px-3 text-xs font-medium transition focus-visible:ring-2 focus-visible:outline-none"
+          className="border-board-button-border bg-board-surface text-board-button-text hover:border-board-button-border-hover hover:bg-board-button-hover focus-visible:ring-board-accent inline-flex min-h-7 shrink-0 items-center gap-1.5 rounded-sm border px-2 text-[11px] font-medium transition focus-visible:ring-2 focus-visible:outline-none"
           onClick={onChooseFiles}
           type="button"
         >

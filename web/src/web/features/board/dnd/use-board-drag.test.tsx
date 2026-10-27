@@ -310,7 +310,7 @@ it("updates the slot after scrolling and rejects areas clipped by the board view
   await interact(() => {
     manager.collisionObserver.forceUpdate();
   });
-  expect(indicator()?.className).toContain("-bottom-1.5");
+  expect(indicator()?.className).toContain("-bottom-1");
   await move(1420, 350);
   expect(indicator()).toBeNull();
   await stop();

@@ -32,23 +32,23 @@ export const UserEditorDialog = ({
 
   return (
     <AppDialog open onClose={onClose} title={user ? copy.editUser : copy.addUser} wide={false}>
-      <form className="grid gap-4" onSubmit={submit}>
-        <label className="grid gap-1.5 text-sm">
+      <form className="grid gap-3" onSubmit={submit}>
+        <label className="grid gap-1 text-xs">
           <span>{copy.name}</span>
           <input
             autoComplete="name"
-            className="border-line bg-canvas text-ink focus-visible:border-accent focus-visible:ring-accent rounded-lg border px-3 py-2.5 outline-none focus-visible:ring-1"
+            className="border-line bg-canvas text-ink focus-visible:border-accent focus-visible:ring-accent rounded-lg border px-2.5 py-1.5 outline-none focus-visible:ring-1"
             maxLength={120}
             onChange={(event) => setName(event.target.value)}
             required
             value={name}
           />
         </label>
-        <label className="grid gap-1.5 text-sm">
+        <label className="grid gap-1 text-xs">
           <span>{copy.email}</span>
           <input
             autoComplete="email"
-            className="border-line bg-canvas text-ink focus-visible:border-accent focus-visible:ring-accent rounded-lg border px-3 py-2.5 outline-none focus-visible:ring-1"
+            className="border-line bg-canvas text-ink focus-visible:border-accent focus-visible:ring-accent rounded-lg border px-2.5 py-1.5 outline-none focus-visible:ring-1"
             maxLength={254}
             onChange={(event) => setEmail(event.target.value)}
             required
@@ -65,11 +65,11 @@ export const UserEditorDialog = ({
           ]}
           value={role}
         />
-        <label className="grid gap-1.5 text-sm">
+        <label className="grid gap-1 text-xs">
           <span>{user ? copy.newPassword : copy.password}</span>
           <input
             autoComplete="new-password"
-            className="border-line bg-canvas text-ink focus-visible:border-accent focus-visible:ring-accent rounded-lg border px-3 py-2.5 outline-none focus-visible:ring-1"
+            className="border-line bg-canvas text-ink focus-visible:border-accent focus-visible:ring-accent rounded-lg border px-2.5 py-1.5 outline-none focus-visible:ring-1"
             minLength={12}
             onChange={(event) => setPassword(event.target.value)}
             required={!user}
@@ -87,7 +87,7 @@ export const UserEditorDialog = ({
         )}
         <div className="mt-2 flex justify-end gap-2">
           <button
-            className="text-muted hover:bg-canvas rounded-lg px-4 py-2.5 text-sm font-medium"
+            className="text-muted hover:bg-canvas rounded-lg px-3 py-1.5 text-xs font-medium"
             disabled={pending}
             onClick={onClose}
             type="button"
@@ -95,7 +95,7 @@ export const UserEditorDialog = ({
             {copy.cancel}
           </button>
           <button
-            className="bg-accent text-on-accent rounded-lg px-4 py-2.5 text-sm font-medium disabled:opacity-50"
+            className="bg-accent text-on-accent rounded-lg px-3 py-1.5 text-xs font-medium disabled:opacity-50"
             disabled={pending}
             type="submit"
           >

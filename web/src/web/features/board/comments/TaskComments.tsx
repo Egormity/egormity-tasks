@@ -72,9 +72,9 @@ export const TaskComments = ({ cardId }: { cardId: string }) => {
   return (
     <section
       aria-label={boardText("Комментарии")}
-      className="border-line space-y-4 border-t pt-5"
+      className="border-line space-y-2.5 border-t pt-3"
     >
-      <h2 className="flex items-center gap-2 text-sm font-semibold">
+      <h2 className="flex items-center gap-2 text-xs font-semibold">
         <MessageSquare size={17} />
         {boardText("Комментарии")}
         {comments.data?.length ? (
@@ -82,7 +82,7 @@ export const TaskComments = ({ cardId }: { cardId: string }) => {
         ) : null}
       </h2>
       {comments.isPending && (
-        <p role="status" className="text-muted text-sm">
+        <p role="status" className="text-muted text-xs">
           {boardText("Загрузка комментариев…")}
         </p>
       )}
@@ -96,14 +96,11 @@ export const TaskComments = ({ cardId }: { cardId: string }) => {
         </button>
       )}
       {comments.data?.length === 0 && (
-        <p className="text-muted text-sm">{boardText("Комментариев пока нет")}</p>
+        <p className="text-muted text-xs">{boardText("Комментариев пока нет")}</p>
       )}
       <div className="space-y-3">
         {comments.data?.map((comment) => (
-          <article
-            key={comment.id}
-            className="border-line bg-canvas rounded-xl border p-3 sm:p-4"
-          >
+          <article key={comment.id} className="border-line bg-canvas rounded-md border p-2.5">
             <header className="mb-2 flex flex-wrap items-baseline justify-between gap-2 text-xs">
               <span className="font-semibold">{comment.author.name}</span>
               <time className="text-muted" dateTime={comment.createdAt}>
@@ -114,7 +111,7 @@ export const TaskComments = ({ cardId }: { cardId: string }) => {
               </time>
             </header>
             {comment.text && (
-              <p className="text-sm leading-6 whitespace-pre-wrap wrap-anywhere">
+              <p className="text-xs leading-5 whitespace-pre-wrap wrap-anywhere">
                 {comment.text}
               </p>
             )}
@@ -151,7 +148,7 @@ export const TaskComments = ({ cardId }: { cardId: string }) => {
           ref={textarea}
           aria-label={boardText("Комментарий")}
           placeholder={boardText("Напишите комментарий…")}
-          className="block max-h-56 min-h-20 w-full resize-none bg-transparent p-3 text-sm leading-6 outline-none"
+          className="block max-h-40 min-h-14 w-full resize-none bg-transparent px-2.5 py-2 text-xs leading-5 outline-none"
           rows={2}
           maxLength={commentLimits.maxText}
           disabled={pending}
@@ -190,16 +187,16 @@ export const TaskComments = ({ cardId }: { cardId: string }) => {
             type="button"
             aria-label={boardText("Прикрепить файл")}
             title={boardText("Прикрепить файл")}
-            className="text-muted grid size-9 place-items-center rounded-lg hover:bg-accent/10"
+            className="text-muted grid size-7 place-items-center rounded-lg hover:bg-accent/10"
             disabled={pending}
             onClick={() => picker.current?.click()}
           >
-            <Paperclip size={19} />
+            <Paperclip size={15} />
           </button>
           <span className="text-muted hidden text-xs sm:block">Ctrl + Enter</span>
           <button
             type="button"
-            className="bg-accent text-on-accent ml-auto flex items-center gap-2 rounded-lg px-3 py-2 text-sm disabled:opacity-40"
+            className="bg-accent text-on-accent ml-auto flex items-center gap-1.5 rounded-sm px-2.5 py-1.5 text-xs disabled:opacity-40"
             disabled={pending || (!text.trim() && !files.length)}
             onClick={() => void send()}
           >

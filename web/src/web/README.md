@@ -1,7 +1,7 @@
 # Web
 
 Frontend only. `main.tsx` initializes preferences and mounts `app/App.tsx`. `app/` owns login gating,
-the responsive sidebar and History API navigation between `/tasks` and `/users`. The users page is
+the compact responsive header and History API navigation between `/tasks` and `/users`. The users page is
 restricted to administrators in both Web and API. Modified link clicks retain native new-tab behavior.
 Startup normalizes legacy task/user hash links and sends unsupported page URLs to the task board.
 
@@ -21,7 +21,8 @@ Startup normalizes legacy task/user hash links and sends unsupported page URLs t
 | `shared`                     | HTTP/error handling, preferences, localization and reusable UI |
 
 `@/` means this directory; `@contracts/` means `../api/contracts/`. Import shared transport types
-directly and keep API implementations out of browser code. Shared theme tokens live in `styles.css`;
+directly and keep API implementations out of browser code. Navigation, language/theme preferences and account controls stay in the header on desktop and mobile.
+Shared theme tokens live in `styles.css`;
 board colors live in `features/board/board-theme.css`. Comments use the shared textarea and draft
 attachment preview primitives. Tests live beside the feature; browser setup is in `test-setup.ts`.
 

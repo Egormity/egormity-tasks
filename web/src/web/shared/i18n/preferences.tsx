@@ -99,25 +99,33 @@ export const usePreferences = () => {
 export const PreferenceControls = () => {
   const { locale, theme, setLocale, setTheme, copy } = usePreferences();
   return (
-    <div className="grid grid-cols-2 gap-2">
-      <Select
-        label={copy.language}
-        value={locale}
-        onChange={setLocale}
-        options={[
-          { value: "ru", label: "Русский" },
-          { value: "en", label: "English" },
-        ]}
-      />
-      <Select
-        label={copy.theme}
-        value={theme}
-        onChange={setTheme}
-        options={[
-          { value: "light", label: copy.light },
-          { value: "dark", label: copy.dark },
-        ]}
-      />
+    <div className="flex shrink-0 items-center gap-1.5">
+      <div className="w-14">
+        <Select
+          compact
+          hideLabel
+          label={copy.language}
+          value={locale}
+          onChange={setLocale}
+          options={[
+            { value: "ru", label: "RU" },
+            { value: "en", label: "EN" },
+          ]}
+        />
+      </div>
+      <div className="w-24">
+        <Select
+          compact
+          hideLabel
+          label={copy.theme}
+          value={theme}
+          onChange={setTheme}
+          options={[
+            { value: "light", label: copy.light },
+            { value: "dark", label: copy.dark },
+          ]}
+        />
+      </div>
     </div>
   );
 };

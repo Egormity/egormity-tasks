@@ -92,15 +92,9 @@ export const BoardPage = () => {
       archived={archived}
       onToggleArchive={() => setArchived((value) => !value)}
       headerSummary={
-        <div className="text-board-summary flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs">
-          <span>{boardText("Команда Trackly")}</span>
-          <span aria-hidden="true" className="text-board-separator">
-            ·
-          </span>
-          <span>
-            {tasks.length} {boardText("задач в проекте")}
-          </span>
-        </div>
+        <span className="text-board-summary whitespace-nowrap text-[11px] tabular-nums">
+          {tasks.length} {boardText("задач в проекте")}
+        </span>
       }
       onCreateTask={openCreate}
       onSearchChange={setSearch}
@@ -108,17 +102,17 @@ export const BoardPage = () => {
       title={boardText(archived ? "Архив" : "Доска")}
     >
       {cardsQuery.isLoading && (
-        <p className="text-board-summary py-12 text-center text-sm">
+        <p className="text-board-summary py-6 text-center text-xs">
           {boardText("Загрузка задач…")}
         </p>
       )}
       {cardsQuery.isError && (
-        <p className="text-board-rose py-12 text-center text-sm">
+        <p className="text-board-rose py-6 text-center text-xs">
           {boardText("Не удалось загрузить задачи.")}
         </p>
       )}
       {archived && !cardsQuery.isLoading && !cardsQuery.isError && (
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <div className="grid gap-2 p-2 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
           {tasks.map((task) => (
             <TaskCard
               key={task.id}
@@ -130,7 +124,7 @@ export const BoardPage = () => {
             />
           ))}
           {!tasks.length && (
-            <p className="text-board-subtle py-12 text-sm">
+            <p className="text-board-subtle py-6 text-xs">
               {boardText("Нет подходящих задач")}
             </p>
           )}
@@ -152,37 +146,35 @@ export const BoardPage = () => {
               return task && <TaskCard isOverlay task={task} />;
             }}
           </DragOverlay>
-          <div className="min-h-full min-w-0 overflow-x-auto overscroll-x-contain">
-            <div className="flex min-h-full min-w-[1330px] items-stretch gap-4 pb-8 xl:gap-5">
-              {boardColumns.map((column) => {
-                const columnTasks = getOrderedColumnTasks(displayedTasks, column.id);
-                const allColumnTasks = getOrderedColumnTasks(
-                  allCardsQuery.data?.items ?? [],
-                  column.id,
-                );
-                return (
-                  <div className="flex min-w-[250px] flex-1 flex-col" key={column.id}>
-                    <BoardColumn
-                      column={column}
-                      insertionBeforeId={
-                        dropTarget?.status === column.id ? dropTarget.beforeId : undefined
-                      }
-                      dragDisabled={!allCardsQuery.data || updateCard.isPending}
-                      exportDisabled={
-                        !allCardsQuery.data || isExporting || exportingColumnId !== null
-                      }
-                      exportTaskCount={allColumnTasks.length}
-                      isExporting={exportingColumnId === column.id}
-                      onExportAll={() =>
-                        void handleExportAll(column.id, boardText(column.label), allColumnTasks)
-                      }
-                      onOpen={openView}
-                      tasks={columnTasks}
-                    />
-                  </div>
-                );
-              })}
-            </div>
+          <div className="flex min-h-full min-w-[1080px] items-stretch">
+            {boardColumns.map((column) => {
+              const columnTasks = getOrderedColumnTasks(displayedTasks, column.id);
+              const allColumnTasks = getOrderedColumnTasks(
+                allCardsQuery.data?.items ?? [],
+                column.id,
+              );
+              return (
+                <div className="flex min-w-[180px] flex-1 flex-col" key={column.id}>
+                  <BoardColumn
+                    column={column}
+                    insertionBeforeId={
+                      dropTarget?.status === column.id ? dropTarget.beforeId : undefined
+                    }
+                    dragDisabled={!allCardsQuery.data || updateCard.isPending}
+                    exportDisabled={
+                      !allCardsQuery.data || isExporting || exportingColumnId !== null
+                    }
+                    exportTaskCount={allColumnTasks.length}
+                    isExporting={exportingColumnId === column.id}
+                    onExportAll={() =>
+                      void handleExportAll(column.id, boardText(column.label), allColumnTasks)
+                    }
+                    onOpen={openView}
+                    tasks={columnTasks}
+                  />
+                </div>
+              );
+            })}
           </div>
         </DragDropProvider>
       )}

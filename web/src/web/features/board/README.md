@@ -14,15 +14,14 @@ database credentials, or project storage tokens are required by the frontend.
 
 `BoardWorkspace.tsx` owns the administrator-scoped query cache, session expiry, notifications,
 and preference rerenders. `i18n/board-copy.catalog.ts` adds English translations to the original Russian
-copy; `board-theme.css` gives the original colors named tokens and dark equivalents. Original
-component dimensions are retained deliberately. Application navigation and appearance/language
-controls belong to the Operations sidebar; archive navigation stays within Tasks.
+copy; `board-theme.css` gives the original colors named tokens and dark equivalents. The layout uses compact cards, adjoining columns and crisp borders. Application navigation and appearance/language
+controls belong to the workspace header; archive navigation stays within Tasks.
 Task view omits the attachment section when the task has no attachments.
 Opening a card shows its details, comments, attachments, tags and event history in the task dialog.
 `editor/use-task-editor.tsx` owns view/edit, archive and export actions. The drag handle remains
 independent on the right.
 On phones the toolbar wraps below the heading and task search remains available at full width.
-Columns keep their horizontal board scrolling; the page navigation moves into the shared hamburger menu.
+Columns scroll within the board on smaller screens; workspace navigation remains in the header.
 
 ## Live updates
 

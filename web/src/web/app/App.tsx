@@ -7,7 +7,7 @@ import { UsersPage } from "@/features/users/UsersPage";
 import { usePreferences } from "@/shared/i18n/preferences";
 import type { User } from "@contracts/auth.js";
 import { navigate, readWorkspaceLocation } from "./navigation";
-import { WorkspaceNavigation } from "./WorkspaceNavigation";
+import { WorkspaceHeader } from "./WorkspaceHeader";
 
 const Workspace = ({ user, onLogout }: { user: User; onLogout: () => void }) => {
   const [page, setPage] = useState(() => {
@@ -29,8 +29,8 @@ const Workspace = ({ user, onLogout }: { user: User; onLogout: () => void }) => 
     return () => window.removeEventListener("popstate", change);
   }, [user.role]);
   return (
-    <div className="bg-canvas text-ink flex h-dvh min-w-0 flex-col overflow-hidden md:flex-row">
-      <WorkspaceNavigation user={user} page={page} onLogout={onLogout} />
+    <div className="bg-canvas text-ink flex h-dvh min-w-0 flex-col overflow-hidden">
+      <WorkspaceHeader user={user} page={page} onLogout={onLogout} />
       <main className="flex min-h-0 min-w-0 flex-1 flex-col">
         {page === "tasks" ? (
           <BoardWorkspace onSessionExpired={onLogout} />

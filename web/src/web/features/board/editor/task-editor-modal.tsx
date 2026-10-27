@@ -165,7 +165,7 @@ export const TaskEditorModal = ({
       <Modal open={open} onOpenChange={onOpenChange}>
         <ModalContent
           {...getRootProps({ role: "dialog" })}
-          className={`flex h-[90vh] !max-h-[90vh] w-[calc(100%-2rem)] !max-w-6xl flex-col overflow-hidden rounded-2xl border p-0 transition-[border-color,box-shadow] ${
+          className={`flex !max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] !max-w-5xl flex-col overflow-hidden rounded-md border p-0 transition-[border-color,box-shadow] ${
             isDragActive
               ? "border-board-accent ring-board-accent/20 ring-4"
               : "border-board-modal-border"
@@ -175,22 +175,22 @@ export const TaskEditorModal = ({
         >
           <input {...getInputProps()} />
           {isDragActive && (
-            <div className="border-board-accent bg-board-surface/85 text-board-accent-hover pointer-events-none absolute inset-3 z-20 grid place-items-center rounded-xl border-2 border-dashed text-center text-sm font-semibold">
+            <div className="border-board-accent bg-board-surface/85 text-board-accent-hover pointer-events-none absolute inset-3 z-20 grid place-items-center rounded-md border-2 border-dashed text-center text-xs font-medium">
               {boardText("Отпустите файлы, чтобы добавить их к задаче")}
             </div>
           )}
           <form className="flex min-h-0 flex-1 flex-col" onSubmit={handleSubmit}>
-            <ModalHeader className="border-board-section-border shrink-0 border-b px-5 py-4 sm:px-7 sm:py-5">
+            <ModalHeader className="border-board-section-border shrink-0 border-b px-4 py-3">
               <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0">
-                  <ModalTitle className="text-board-heading text-xl tracking-[-0.03em] sm:text-2xl">
+                  <ModalTitle className="text-board-heading text-base tracking-tight">
                     {mode === "create"
                       ? boardText("Новая задача")
                       : mode === "edit"
                         ? boardText("Редактировать задачу")
                         : boardText("Просмотр задачи")}
                   </ModalTitle>
-                  <ModalDescription className="text-board-muted mt-1 max-w-xl text-sm leading-5">
+                  <ModalDescription className="text-board-muted mt-1 max-w-xl text-xs leading-4">
                     {mode === "view"
                       ? boardText("Просмотрите детали задачи и выберите нужное действие.")
                       : task
@@ -202,7 +202,7 @@ export const TaskEditorModal = ({
                 </div>
                 <ModalClose
                   aria-label={boardText("Закрыть окно")}
-                  className="text-board-icon hover:bg-board-input-surface hover:text-board-accent-hover focus-visible:ring-board-accent grid size-9 shrink-0 place-items-center rounded-xl transition focus-visible:ring-2 focus-visible:outline-none"
+                  className="text-board-icon hover:bg-board-input-surface hover:text-board-accent-hover focus-visible:ring-board-accent grid size-7 shrink-0 place-items-center rounded-md transition focus-visible:ring-2 focus-visible:outline-none"
                 >
                   <X aria-hidden="true" className="size-4" />
                 </ModalClose>
@@ -210,26 +210,26 @@ export const TaskEditorModal = ({
             </ModalHeader>
 
             <div className="min-h-0 w-full min-w-0 flex-1 overflow-y-auto overscroll-contain">
-              <div className="grid min-h-full w-full min-w-0 gap-7 px-5 py-6 sm:px-7 sm:py-7 lg:grid-cols-[minmax(0,1.3fr)_minmax(16rem,0.7fr)] lg:gap-x-0">
+              <div className="grid min-h-full w-full min-w-0 gap-4 px-4 py-3 lg:grid-cols-[minmax(0,1.3fr)_minmax(16rem,0.7fr)] lg:gap-x-0">
                 {isView ? (
                   <>
                     <section
                       aria-label={boardText("Основные детали")}
-                      className="task-editor-modal-divider lg:border-board-divider min-w-0 space-y-6 lg:border-r lg:pr-7"
+                      className="task-editor-modal-divider lg:border-board-divider min-w-0 space-y-4 lg:border-r lg:pr-4"
                     >
                       <div>
-                        <p className="text-board-muted text-sm font-semibold">
+                        <p className="text-board-muted text-xs font-medium">
                           {boardText("Название")}
                         </p>
-                        <h2 className="text-board-heading mt-2 text-2xl font-semibold tracking-[-0.03em]">
+                        <h2 className="text-board-heading mt-1 text-lg font-semibold tracking-tight">
                           {task?.title}
                         </h2>
                       </div>
                       <div>
-                        <h2 className="text-board-text text-sm font-semibold">
+                        <h2 className="text-board-text text-xs font-medium">
                           {boardText("Описание")}
                         </h2>
-                        <div className="border-board-input-border bg-board-canvas text-board-secondary mt-2 min-h-32 rounded-xl border px-4 py-3.5 text-sm leading-6">
+                        <div className="border-board-input-border bg-board-canvas text-board-secondary mt-1.5 min-h-20 rounded-md border px-3 py-2 text-xs leading-5">
                           {task?.description ? (
                             <p className="whitespace-pre-wrap">{task.description}</p>
                           ) : (
@@ -242,7 +242,7 @@ export const TaskEditorModal = ({
                       {task && task.attachments.length > 0 && (
                         <section aria-labelledby="task-view-attachments-heading">
                           <h2
-                            className="text-board-text text-sm font-semibold"
+                            className="text-board-text text-xs font-medium"
                             id="task-view-attachments-heading"
                           >
                             {boardText("Вложения")}
@@ -256,7 +256,7 @@ export const TaskEditorModal = ({
                       {task && <TaskComments key={task.id} cardId={task.id} />}
                     </section>
 
-                    <aside className="min-w-0 space-y-7 lg:pl-7">
+                    <aside className="min-w-0 space-y-4 lg:pl-4">
                       <TaskEditorTags
                         onConfigure={() => setTagManagerOpen(true)}
                         readOnly
@@ -270,11 +270,11 @@ export const TaskEditorModal = ({
                   <>
                     <section
                       aria-label={boardText("Основные детали")}
-                      className="task-editor-modal-divider lg:border-board-divider min-w-0 space-y-5 lg:border-r lg:pr-7"
+                      className="task-editor-modal-divider lg:border-board-divider min-w-0 space-y-3 lg:border-r lg:pr-4"
                     >
                       <div>
                         <label
-                          className="text-board-text text-sm font-semibold"
+                          className="text-board-text text-xs font-medium"
                           htmlFor="task-title"
                         >
                           {boardText("Название")}
@@ -282,7 +282,7 @@ export const TaskEditorModal = ({
                         </label>
                         <input
                           autoFocus
-                          className="border-board-input-border bg-board-input-surface text-board-input-text placeholder:text-board-placeholder focus:border-board-accent focus:ring-board-accent/15 mt-2 h-12 w-full rounded-xl border px-3.5 text-base transition outline-none focus:ring-2"
+                          className="border-board-input-border bg-board-input-surface text-board-input-text placeholder:text-board-placeholder focus:border-board-accent focus:ring-board-accent/15 mt-1.5 h-8 w-full rounded-md border px-2.5 text-xs transition outline-none focus:ring-2"
                           id="task-title"
                           onChange={(event) => {
                             setTitle(event.target.value);
@@ -307,7 +307,7 @@ export const TaskEditorModal = ({
                       <div>
                         <div className="flex items-baseline justify-between gap-3">
                           <label
-                            className="text-board-text text-sm font-semibold"
+                            className="text-board-text text-xs font-medium"
                             htmlFor="task-description-editor"
                           >
                             {boardText("Описание")}{" "}
@@ -332,7 +332,7 @@ export const TaskEditorModal = ({
                       </div>
                     </section>
 
-                    <aside className="min-w-0 space-y-7 lg:pl-7">
+                    <aside className="min-w-0 space-y-4 lg:pl-4">
                       <TaskEditorTags
                         onConfigure={() => setTagManagerOpen(true)}
                         onToggleTag={(id) =>
@@ -353,12 +353,12 @@ export const TaskEditorModal = ({
               </div>
             </div>
 
-            <ModalFooter className="border-board-section-border bg-board-surface shrink-0 border-t px-5 py-4 sm:px-7">
+            <ModalFooter className="border-board-section-border bg-board-surface shrink-0 border-t px-4 py-2.5">
               {isView ? (
                 <>
                   <ModalClose asChild>
                     <button
-                      className="border-board-input-border text-board-button-muted hover:bg-board-surface-hover focus-visible:ring-board-accent inline-flex min-h-11 w-full items-center justify-center rounded-xl border px-4 text-sm font-semibold transition focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none sm:w-auto"
+                      className="border-board-input-border text-board-button-muted hover:bg-board-surface-hover focus-visible:ring-board-accent inline-flex min-h-8 w-full items-center justify-center rounded-md border px-3 text-xs font-medium transition focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none sm:w-auto"
                       type="button"
                     >
                       {boardText("Закрыть")}
@@ -367,7 +367,7 @@ export const TaskEditorModal = ({
                   {onArchive && (
                     <button
                       aria-busy={isArchiving}
-                      className="border-board-danger-border text-board-danger hover:bg-board-rose-surface focus-visible:ring-board-rose inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border px-4 text-sm font-semibold transition focus-visible:ring-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+                      className="border-board-danger-border text-board-danger hover:bg-board-rose-surface focus-visible:ring-board-rose inline-flex min-h-8 w-full items-center justify-center gap-1.5 rounded-md border px-3 text-xs font-medium transition focus-visible:ring-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
                       disabled={isArchiving}
                       onClick={onArchive}
                       type="button"
@@ -385,7 +385,7 @@ export const TaskEditorModal = ({
                   {onExport && (
                     <button
                       aria-busy={isExporting}
-                      className="border-board-input-border text-board-accent hover:bg-board-subtle-selected focus-visible:ring-board-accent inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border px-4 text-sm font-semibold transition focus-visible:ring-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+                      className="border-board-input-border text-board-accent hover:bg-board-subtle-selected focus-visible:ring-board-accent inline-flex min-h-8 w-full items-center justify-center gap-1.5 rounded-md border px-3 text-xs font-medium transition focus-visible:ring-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
                       disabled={isExporting}
                       onClick={onExport}
                       type="button"
@@ -402,7 +402,7 @@ export const TaskEditorModal = ({
                   )}
                   {onRequestEdit && (
                     <button
-                      className="bg-board-accent text-board-on-accent shadow-board-button hover:bg-board-accent-hover focus-visible:ring-board-accent inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl px-5 text-sm font-semibold transition focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none sm:w-auto"
+                      className="bg-board-accent text-board-on-accent shadow-board-button hover:bg-board-accent-hover focus-visible:ring-board-accent inline-flex min-h-8 w-full items-center justify-center gap-1.5 rounded-md px-3 text-xs font-medium transition focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none sm:w-auto"
                       onClick={onRequestEdit}
                       type="button"
                     >
@@ -414,7 +414,7 @@ export const TaskEditorModal = ({
                 <>
                   {onCancel ? (
                     <button
-                      className="border-board-input-border text-board-button-muted hover:bg-board-surface-hover focus-visible:ring-board-accent inline-flex min-h-11 w-full items-center justify-center rounded-xl border px-4 text-sm font-semibold transition focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none sm:w-auto"
+                      className="border-board-input-border text-board-button-muted hover:bg-board-surface-hover focus-visible:ring-board-accent inline-flex min-h-8 w-full items-center justify-center rounded-md border px-3 text-xs font-medium transition focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none sm:w-auto"
                       onClick={onCancel}
                       type="button"
                     >
@@ -423,7 +423,7 @@ export const TaskEditorModal = ({
                   ) : (
                     <ModalClose asChild>
                       <button
-                        className="border-board-input-border text-board-button-muted hover:bg-board-surface-hover focus-visible:ring-board-accent inline-flex min-h-11 w-full items-center justify-center rounded-xl border px-4 text-sm font-semibold transition focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none sm:w-auto"
+                        className="border-board-input-border text-board-button-muted hover:bg-board-surface-hover focus-visible:ring-board-accent inline-flex min-h-8 w-full items-center justify-center rounded-md border px-3 text-xs font-medium transition focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none sm:w-auto"
                         type="button"
                       >
                         {boardText("Отмена")}
@@ -432,7 +432,7 @@ export const TaskEditorModal = ({
                   )}
                   <button
                     aria-busy={isSaving}
-                    className="bg-board-accent text-board-on-accent shadow-board-button hover:bg-board-accent-hover focus-visible:ring-board-accent inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl px-5 text-sm font-semibold transition focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+                    className="bg-board-accent text-board-on-accent shadow-board-button hover:bg-board-accent-hover focus-visible:ring-board-accent inline-flex min-h-8 w-full items-center justify-center gap-1.5 rounded-md px-3 text-xs font-medium transition focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
                     disabled={isSaving}
                     type="submit"
                   >

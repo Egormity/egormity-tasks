@@ -24,18 +24,18 @@ export const TaskEditorTags = ({
   const selectedTags = tags.filter((tag) => selectedTagIds.includes(tag.id));
 
   return (
-    <section aria-labelledby="task-tags-heading" className="space-y-3">
+    <section aria-labelledby="task-tags-heading" className="space-y-2">
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <TagIcon aria-hidden="true" className="text-board-icon size-4" />
-          <h2 className="text-board-text text-sm font-semibold" id="task-tags-heading">
+          <h2 className="text-board-text text-xs font-medium" id="task-tags-heading">
             {boardText("Теги")}
           </h2>
         </div>
         {!readOnly && onConfigure && (
           <button
             aria-label={boardText("Настроить справочник тегов")}
-            className="text-board-icon hover:bg-board-selected hover:text-board-accent-hover focus-visible:ring-board-accent inline-flex min-h-8 items-center gap-1.5 rounded-lg px-2 text-xs font-semibold transition focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+            className="text-board-icon hover:bg-board-selected hover:text-board-accent-hover focus-visible:ring-board-accent inline-flex min-h-7 items-center gap-1.5 rounded-lg px-2 text-xs font-semibold transition focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
             onClick={onConfigure}
             type="button"
           >
@@ -45,13 +45,13 @@ export const TaskEditorTags = ({
         )}
       </div>
 
-      <div className="border-board-modal-border bg-board-canvas rounded-2xl border p-4">
+      <div className="border-board-modal-border bg-board-canvas rounded-md border p-2.5">
         {readOnly ? (
           selectedTags.length > 0 ? (
             <div className="flex flex-wrap gap-2">
               {selectedTags.map((tag) => (
                 <span
-                  className={`rounded-lg px-2.5 py-1.5 text-xs font-semibold ${taskTagToneStyles[tag.tone]}`}
+                  className={`rounded-sm px-1.5 py-0.5 text-[11px] font-medium ${taskTagToneStyles[tag.tone]}`}
                   key={tag.id}
                 >
                   {tag.name}
@@ -65,16 +65,16 @@ export const TaskEditorTags = ({
           )
         ) : tags.length > 0 ? (
           <div className="space-y-2">
-            <p className="text-board-summary mb-3 text-xs">
+            <p className="text-board-summary mb-2 text-[11px]">
               {boardText("Выберите один или несколько тегов для этой карточки.")}
             </p>
-            <div className="grid gap-2 sm:grid-cols-2">
+            <div className="grid gap-1.5 sm:grid-cols-2">
               {tags.map((tag) => {
                 const selected = selectedTagIds.includes(tag.id);
 
                 return (
                   <label
-                    className={`flex min-w-0 items-center justify-between gap-2.5 rounded-xl border px-3 py-2.5 text-left transition-colors ${selected ? "border-board-accent-border bg-board-toolbar-hover" : "border-board-modal-border bg-board-surface"}`}
+                    className={`flex min-w-0 items-center justify-between gap-2 rounded-sm border px-2 py-1 text-left transition-colors ${selected ? "border-board-accent-border bg-board-toolbar-hover" : "border-board-modal-border bg-board-surface"}`}
                     key={tag.id}
                   >
                     <TrackerCheckbox
@@ -83,7 +83,7 @@ export const TaskEditorTags = ({
                       onChange={() => onToggleTag?.(tag.id)}
                     />
                     <span
-                      className={`max-w-full min-w-0 truncate rounded-lg px-2.5 py-1.5 text-xs font-semibold ${taskTagToneStyles[tag.tone]}`}
+                      className={`max-w-full min-w-0 truncate rounded-sm px-1.5 py-0.5 text-[11px] font-medium ${taskTagToneStyles[tag.tone]}`}
                     >
                       {tag.name}
                     </span>

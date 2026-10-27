@@ -31,7 +31,7 @@ export const AppDialog = ({
         <Dialog.Overlay className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs" />
         <Dialog.Content
           aria-describedby={undefined}
-          className={`border-line bg-panel text-ink fixed top-1/2 left-1/2 z-50 flex max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-2xl border shadow-2xl outline-none ${wide ? "max-w-3xl" : "max-w-xl"}`}
+          className={`border-line bg-panel text-ink fixed top-1/2 left-1/2 z-50 flex max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-md border shadow-2xl outline-none ${wide ? "max-w-3xl" : "max-w-xl"}`}
           onOpenAutoFocus={() => {
             previousFocus.current = document.activeElement as HTMLElement;
           }}
@@ -41,16 +41,16 @@ export const AppDialog = ({
           }}
           onSubmit={(event) => event.stopPropagation()}
         >
-          <header className="border-line flex shrink-0 items-center justify-between gap-3 border-b px-5 py-4">
-            <Dialog.Title className="text-base font-semibold">{title}</Dialog.Title>
+          <header className="border-line flex shrink-0 items-center justify-between gap-3 border-b px-4 py-2.5">
+            <Dialog.Title className="text-sm font-semibold">{title}</Dialog.Title>
             <Dialog.Close
               aria-label={copy.close}
-              className="text-muted hover:bg-accent/10 grid size-9 shrink-0 place-items-center rounded-lg"
+              className="text-muted hover:bg-accent/10 grid size-7 shrink-0 place-items-center rounded-lg"
             >
-              <X size={18} />
+              <X size={15} />
             </Dialog.Close>
           </header>
-          <div className="scroll-area min-h-0 overflow-y-auto overscroll-contain p-5">
+          <div className="scroll-area min-h-0 overflow-y-auto overscroll-contain p-4">
             {children}
           </div>
         </Dialog.Content>

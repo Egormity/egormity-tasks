@@ -71,19 +71,17 @@ export const UsersPage = ({
   };
 
   return (
-    <section className="scroll-area min-h-0 flex-1 overflow-y-auto p-5 md:p-8">
-      <div className="mx-auto w-full max-w-6xl">
-        <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
+    <section className="scroll-area min-h-0 flex-1 overflow-y-auto p-3">
+      <div className="w-full">
+        <div className="mb-3 flex flex-wrap items-start justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight">
-              {copy.userManagementTitle}
-            </h1>
-            <p className="text-muted mt-2 max-w-2xl text-sm leading-6">
+            <h1 className="text-sm font-semibold tracking-tight">{copy.userManagementTitle}</h1>
+            <p className="text-muted mt-1 max-w-2xl text-xs leading-5">
               {copy.userManagementDescription}
             </p>
           </div>
           <button
-            className="bg-accent text-on-accent rounded-lg px-4 py-2.5 text-sm font-medium"
+            className="bg-accent text-on-accent rounded-sm px-2.5 py-1.5 text-xs font-medium"
             onClick={() => openEditor(null)}
             type="button"
           >
@@ -91,7 +89,7 @@ export const UsersPage = ({
           </button>
         </div>
 
-        <div className="border-line bg-panel overflow-hidden rounded-xl border">
+        <div className="border-line bg-panel overflow-hidden rounded-sm border">
           {loading ? (
             <p className="text-muted p-6 text-sm">{copy.loading}</p>
           ) : loadError ? (
@@ -111,20 +109,20 @@ export const UsersPage = ({
             <p className="text-muted p-8 text-center text-sm">{copy.emptyUsers}</p>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[620px] text-left text-sm">
+              <table className="w-full min-w-[620px] text-left text-xs">
                 <caption className="sr-only">{copy.userManagementTitle}</caption>
                 <thead className="border-line text-muted border-b text-xs uppercase tracking-wide">
                   <tr>
-                    <th className="px-5 py-3 font-medium" scope="col">
+                    <th className="px-3 py-2 font-medium" scope="col">
                       {copy.name}
                     </th>
-                    <th className="px-5 py-3 font-medium" scope="col">
+                    <th className="px-3 py-2 font-medium" scope="col">
                       {copy.email}
                     </th>
-                    <th className="px-5 py-3 font-medium" scope="col">
+                    <th className="px-3 py-2 font-medium" scope="col">
                       {copy.role}
                     </th>
-                    <th className="px-5 py-3 text-right font-medium" scope="col">
+                    <th className="px-3 py-2 text-right font-medium" scope="col">
                       {copy.actions}
                     </th>
                   </tr>
@@ -132,14 +130,14 @@ export const UsersPage = ({
                 <tbody className="divide-line divide-y">
                   {users.map((user) => (
                     <tr className="hover:bg-canvas/70" key={user.id}>
-                      <td className="px-5 py-4 font-medium">{user.name}</td>
-                      <td className="text-muted px-5 py-4">{user.email}</td>
-                      <td className="px-5 py-4">
-                        <span className="border-line bg-canvas rounded-full border px-2.5 py-1 text-xs font-medium">
+                      <td className="px-3 py-2 font-medium">{user.name}</td>
+                      <td className="text-muted px-3 py-2">{user.email}</td>
+                      <td className="px-3 py-2">
+                        <span className="border-line bg-canvas rounded-sm border px-1.5 py-0.5 text-[10px] font-medium">
                           {user.role === "admin" ? copy.adminRole : copy.managerRole}
                         </span>
                       </td>
-                      <td className="px-5 py-4 text-right">
+                      <td className="px-3 py-2 text-right">
                         <button
                           className="text-accent font-medium underline underline-offset-4"
                           onClick={() => openEditor(user)}

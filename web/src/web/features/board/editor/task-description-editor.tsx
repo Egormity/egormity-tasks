@@ -29,7 +29,7 @@ const ToolbarButton = ({
   <button
     aria-label={label}
     aria-pressed={active}
-    className={`text-board-icon hover:bg-board-toolbar-hover hover:text-board-accent-hover focus-visible:ring-board-accent grid size-8 place-items-center rounded-lg transition focus-visible:ring-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-40 ${active ? "bg-board-button-selected text-board-accent" : ""}`}
+    className={`text-board-icon hover:bg-board-toolbar-hover hover:text-board-accent-hover focus-visible:ring-board-accent grid size-7 place-items-center rounded-lg transition focus-visible:ring-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-40 ${active ? "bg-board-button-selected text-board-accent" : ""}`}
     disabled={disabled}
     onClick={onClick}
     title={label}
@@ -64,7 +64,7 @@ export const TaskDescriptionEditor = ({
       attributes: {
         "aria-label": boardText("Описание задачи"),
         class:
-          "min-h-[200px] max-h-[500px] overflow-y-auto px-3.5 py-3 text-sm leading-6 text-board-input-text outline-none [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:mb-2 [&_p:last-child]:mb-0 [&_ul]:list-disc [&_ul]:pl-5",
+          "min-h-[140px] max-h-[360px] overflow-y-auto px-3 py-2 text-xs leading-5 text-board-input-text outline-none [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:mb-2 [&_p:last-child]:mb-0 [&_ul]:list-disc [&_ul]:pl-5",
         id: "task-description-editor",
       },
       handlePaste: (view, event, slice) => {
@@ -120,10 +120,10 @@ export const TaskDescriptionEditor = ({
   });
 
   return (
-    <div className="border-board-input-border bg-board-input-surface focus-within:border-board-accent focus-within:ring-board-accent/15 mt-2 overflow-hidden rounded-xl border transition focus-within:ring-2">
+    <div className="border-board-input-border bg-board-input-surface focus-within:border-board-accent focus-within:ring-board-accent/15 mt-1.5 overflow-hidden rounded-md border transition focus-within:ring-2">
       <div
         aria-label={boardText("Инструменты форматирования")}
-        className="border-board-section-border bg-board-canvas flex items-center gap-1 border-b px-2 py-1.5"
+        className="border-board-section-border bg-board-canvas flex items-center gap-1 border-b px-1.5 py-1"
         role="toolbar"
       >
         <ToolbarButton
@@ -173,7 +173,7 @@ export const TaskDescriptionEditor = ({
       </div>
       <div className="relative">
         {isEmpty && (
-          <span className="text-board-placeholder pointer-events-none absolute top-3 left-3.5 z-10 text-sm leading-6">
+          <span className="text-board-placeholder pointer-events-none absolute top-2 left-3 z-10 text-xs leading-5">
             {boardText("Что нужно сделать и какой результат ожидается?")}
           </span>
         )}

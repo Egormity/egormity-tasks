@@ -1,7 +1,6 @@
 export const en = {
   brand: "Amazi",
   title: "Operations",
-  subtitle: "Your engineering workspace",
   loginTitle: "Welcome back",
   loginDescription: "Sign in with your workspace account.",
   email: "Email address",
@@ -29,8 +28,6 @@ export const en = {
   emptyUsers: "No user accounts yet.",
   retry: "Retry",
   navigation: "Pages",
-  openMenu: "Open menu",
-  closeMenu: "Close menu",
   language: "Language",
   theme: "Theme",
   light: "Light",
