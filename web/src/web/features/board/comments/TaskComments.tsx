@@ -1,24 +1,45 @@
-import { useRef, useState } from "react";
+import { useRef } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { LoaderCircle, MessageSquare, Paperclip } from "lucide-react";
-import { commentLimits } from "@contracts/task-comments.js";
-import { DraftAttachments } from "@/shared/ui/DraftAttachments";
-import { useAutosizeTextarea } from "@/shared/ui/useAutosizeTextarea";
-import { TaskAttachmentsCarousel } from "../attachments/task-attachments-carousel";
+import { MessageSquare, RotateCcw } from "lucide-react";
 import { boardText } from "../i18n/board-copy";
 import { refreshTrackerBoard, trackerBoardQuery } from "../data/tracker-query";
 import { addTaskComment, getTaskComments } from "./comment-api";
+import { CommentComposer } from "./comment-composer";
+import { CommentItem } from "./comment-item";
+
+const CommentsSkeleton = () => (
+  <div aria-busy="true" className="space-y-2">
+    <span className="sr-only" role="status">
+      {boardText("Загрузка комментариев…")}
+    </span>
+    {[0, 1].map((row) => (
+      <div
+        key={row}
+        className="border-line bg-board-canvas/60 flex animate-pulse gap-2.5 rounded-lg border px-3 py-2.5"
+      >
+        <span className="bg-board-count-surface size-7 shrink-0 rounded-full" />
+        <span className="block flex-1 space-y-2 py-1">
+          <span className="bg-board-count-surface block h-2 w-24 rounded-full" />
+          <span className="bg-board-count-surface block h-2 w-3/4 rounded-full" />
+        </span>
+      </div>
+    ))}
+  </div>
+);
+
+const CommentsEmpty = () => (
+  <div className="border-line/80 bg-board-canvas/40 flex flex-col items-center gap-1 rounded-lg border border-dashed px-3 py-5 text-center">
+    <MessageSquare aria-hidden="true" className="text-board-subtle mb-0.5" size={18} />
+    <p className="text-board-muted text-xs">{boardText("Комментариев пока нет")}</p>
+    <p className="text-board-subtle text-[0.72rem]">
+      {boardText("Начните обсуждение. Поддерживается Markdown.")}
+    </p>
+  </div>
+);
 
 export const TaskComments = ({ cardId }: { cardId: string }) => {
   const client = useQueryClient();
-  const [text, setText] = useState("");
-  const [files, setFiles] = useState<File[]>([]);
-  const [pending, setPending] = useState(false);
-  const [error, setError] = useState("");
   const submission = useRef<{ signature: string; id: string } | null>(null);
-  const sending = useRef(false);
-  const picker = useRef<HTMLInputElement>(null);
-  const textarea = useAutosizeTextarea(text);
   const revision = useQuery({
     ...trackerBoardQuery,
     select: (board) => board.cards.find((card) => card.id === cardId)?.revision,
@@ -29,187 +50,53 @@ export const TaskComments = ({ cardId }: { cardId: string }) => {
     placeholderData: (previous) => previous,
     staleTime: Infinity,
   });
-  const add = (incoming: File[]) => {
-    if (pending) return;
-    const next = [...files, ...incoming];
-    if (
-      next.length > commentLimits.maxFiles ||
-      next.some((file) => !file.size) ||
-      next.reduce((sum, file) => sum + file.size, 0) > commentLimits.maxBytes
-    ) {
-      setError(boardText("До 10 непустых файлов, не более 20 МБ суммарно."));
-      return;
-    }
-    setFiles(next);
-    setError("");
-  };
-  const send = async () => {
-    if (sending.current || (!text.trim() && !files.length)) return;
-    sending.current = true;
-    setPending(true);
-    setError("");
+
+  const submit = async (text: string, files: File[]) => {
     const signature = JSON.stringify([
       text.trim(),
       files.map((file) => [file.name, file.size, file.type, file.lastModified]),
     ]);
-    if (submission.current?.signature !== signature)
-      submission.current = { signature, id: crypto.randomUUID() };
-    try {
-      await addTaskComment(cardId, submission.current.id, text, files);
-      setText("");
-      setFiles([]);
-      submission.current = null;
-      await Promise.all([comments.refetch(), refreshTrackerBoard(client)]);
-    } catch {
-      setError(
-        boardText("Не удалось отправить комментарий. Черновик сохранён, попробуйте ещё раз."),
-      );
-    } finally {
-      sending.current = false;
-      setPending(false);
-    }
+    const submissionId =
+      submission.current?.signature === signature ? submission.current.id : crypto.randomUUID();
+    submission.current = { signature, id: submissionId };
+    await addTaskComment(cardId, submissionId, text, files);
+    submission.current = null;
+    await Promise.all([comments.refetch(), refreshTrackerBoard(client)]);
   };
+
   return (
-    <section
-      aria-label={boardText("Комментарии")}
-      className="border-line space-y-2.5 border-t pt-3"
-    >
-      <h2 className="flex items-center gap-2 text-xs font-semibold">
-        <MessageSquare size={17} />
+    <section aria-label={boardText("Комментарии")} className="border-line border-t pt-4">
+      <h2 className="text-board-heading mb-3 flex items-center gap-1.5 text-xs font-semibold">
+        <MessageSquare aria-hidden="true" className="text-board-icon" size={16} />
         {boardText("Комментарии")}
         {comments.data?.length ? (
-          <span className="text-muted font-normal">{comments.data.length}</span>
+          <span className="bg-board-count-surface text-board-count rounded-full px-1.5 py-px text-[0.7rem] font-medium tabular-nums">
+            {comments.data.length}
+          </span>
         ) : null}
       </h2>
-      {comments.isPending && (
-        <p role="status" className="text-muted text-xs">
-          {boardText("Загрузка комментариев…")}
-        </p>
-      )}
-      {comments.isError && (
-        <button
-          type="button"
-          className="text-accent text-sm"
-          onClick={() => void comments.refetch()}
-        >
-          {boardText("Не удалось загрузить комментарии. Повторить")}
-        </button>
-      )}
-      {comments.data?.length === 0 && (
-        <p className="text-muted text-xs">{boardText("Комментариев пока нет")}</p>
-      )}
       <div className="space-y-3">
-        {comments.data?.map((comment) => (
-          <article key={comment.id} className="border-line bg-canvas rounded-md border p-2.5">
-            <header className="mb-2 flex flex-wrap items-baseline justify-between gap-2 text-xs">
-              <span className="font-semibold">{comment.author.name}</span>
-              <time className="text-muted" dateTime={comment.createdAt}>
-                {new Date(comment.createdAt).toLocaleString(document.documentElement.lang, {
-                  dateStyle: "short",
-                  timeStyle: "short",
-                })}
-              </time>
-            </header>
-            {comment.text && (
-              <p className="text-xs leading-5 whitespace-pre-wrap wrap-anywhere">
-                {comment.text}
-              </p>
-            )}
-            {comment.attachments.length > 0 && (
-              <TaskAttachmentsCarousel
-                cardId={cardId}
-                attachments={comment.attachments.map((file) => ({
-                  ...file,
-                  objectId: file.sha256,
-                }))}
-              />
-            )}
-          </article>
-        ))}
-      </div>
-      <div
-        className="border-line bg-canvas focus-within:border-accent overflow-hidden rounded-xl border"
-        onDragOver={(event) => {
-          if (event.dataTransfer.types.includes("Files")) event.preventDefault();
-        }}
-        onDrop={(event) => {
-          event.preventDefault();
-          event.stopPropagation();
-          add(Array.from(event.dataTransfer.files));
-        }}
-      >
-        <DraftAttachments
-          removeLabel={boardText("Удалить")}
-          files={files}
-          disabled={pending}
-          onRemove={(index) => setFiles((value) => value.filter((_, i) => i !== index))}
-        />
-        <textarea
-          ref={textarea}
-          aria-label={boardText("Комментарий")}
-          placeholder={boardText("Напишите комментарий…")}
-          className="block max-h-40 min-h-14 w-full resize-none bg-transparent px-2.5 py-2 text-xs leading-5 outline-none"
-          rows={2}
-          maxLength={commentLimits.maxText}
-          disabled={pending}
-          value={text}
-          onChange={(event) => setText(event.target.value)}
-          onPaste={(event) => {
-            if (event.clipboardData.files.length) {
-              event.preventDefault();
-              event.stopPropagation();
-              add(Array.from(event.clipboardData.files));
-            }
-          }}
-          onKeyDown={(event) => {
-            if (
-              event.key === "Enter" &&
-              (event.ctrlKey || event.metaKey) &&
-              !event.nativeEvent.isComposing
-            ) {
-              event.preventDefault();
-              void send();
-            }
-          }}
-        />
-        <div className="flex items-center justify-between gap-2 p-2">
-          <input
-            type="file"
-            hidden
-            multiple
-            ref={picker}
-            onChange={(event) => {
-              add(Array.from(event.target.files ?? []));
-              event.target.value = "";
-            }}
-          />
+        {comments.isError && (
           <button
+            className="border-board-danger-border bg-board-rose-surface text-board-danger flex w-full items-center gap-1.5 rounded-md border px-3 py-2 text-left text-xs"
             type="button"
-            aria-label={boardText("Прикрепить файл")}
-            title={boardText("Прикрепить файл")}
-            className="text-muted grid size-7 place-items-center rounded-lg hover:bg-accent/10"
-            disabled={pending}
-            onClick={() => picker.current?.click()}
+            onClick={() => void comments.refetch()}
           >
-            <Paperclip size={15} />
+            <RotateCcw aria-hidden="true" size={14} />
+            {boardText("Не удалось загрузить комментарии. Повторить")}
           </button>
-          <span className="text-muted hidden text-xs sm:block">Ctrl + Enter</span>
-          <button
-            type="button"
-            className="bg-accent text-on-accent ml-auto flex items-center gap-1.5 rounded-sm px-2.5 py-1.5 text-xs disabled:opacity-40"
-            disabled={pending || (!text.trim() && !files.length)}
-            onClick={() => void send()}
-          >
-            {pending && <LoaderCircle size={15} className="animate-spin" />}
-            {boardText("Отправить комментарий")}
-          </button>
-        </div>
+        )}
+        {comments.isPending && <CommentsSkeleton />}
+        {comments.data?.length === 0 && <CommentsEmpty />}
+        {comments.data && comments.data.length > 0 && (
+          <div className="space-y-2">
+            {comments.data.map((comment) => (
+              <CommentItem key={comment.id} cardId={cardId} comment={comment} />
+            ))}
+          </div>
+        )}
+        <CommentComposer onSubmit={submit} />
       </div>
-      {error && (
-        <p role="alert" className="text-danger text-sm">
-          {error}
-        </p>
-      )}
     </section>
   );
 };

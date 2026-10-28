@@ -11,6 +11,10 @@ export const boardEnglish: Readonly<Record<string, string>> = {
   "До 10 непустых файлов, не более 20 МБ суммарно.": "Up to 10 non-empty files, 20 MB total.",
   "Прикрепить файл": "Attach file",
   "Отправить комментарий": "Send comment",
+  Код: "Code",
+  Ссылка: "Link",
+  "Начните обсуждение. Поддерживается Markdown.":
+    "Start the discussion. Markdown is supported.",
   "Добавлен комментарий": "Comment added",
   "Экспортировать все задачи колонки «{0}»": "Export all tasks in “{0}”",
   "Подготовка архива…": "Preparing archive…",

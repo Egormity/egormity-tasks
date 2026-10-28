@@ -44,6 +44,11 @@ Task history is cached by task ID and revision and reread when that revision cha
 Comments in `comments/TaskComments.tsx` also use task ID/revision and retain their input across live
 updates. The task view shows comments with preview/download attachments; multipart writes commit
 text and files together and retain the draft after failure. Exports include comments and their files.
+Comment bodies render GitHub-flavored Markdown (`react-markdown` with GFM and hard line breaks;
+raw HTML is dropped and links open in a new tab) with themed typography for lists, quotes, tables
+and code. `comments/comment-item.tsx` shows author initials and a localized timestamp;
+`comments/comment-composer.tsx` owns the draft, files and formatting toolbar, while
+`comments/comment-format.ts` holds the pure Markdown insertion helpers.
 `BoardStore` persists the ordered, editable column list and titled dividers with their current column
 and mixed-item order in PostgreSQL's `board_settings` JSON rows. It seeds the default array only when no saved setting exists, so changes
 survive API restarts without a versioned database migration. The API-owned defaults and validation
