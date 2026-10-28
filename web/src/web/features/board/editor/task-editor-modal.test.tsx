@@ -51,6 +51,8 @@ it("keeps the original separate read and edit views, saving title and descriptio
   expect(screen.getByRole("heading", { name: "Original task" })).toBeTruthy();
   expect(screen.getByText("Original description")).toBeTruthy();
   expect(screen.getByRole("textbox", { name: "Comment" })).toBeTruthy();
+  expect(screen.getByRole("button", { name: /Comments/ })).toBeTruthy();
+  expect(screen.getByRole("button", { name: /History/ })).toBeTruthy();
   expect(screen.queryByRole("textbox", { name: /Title/ })).toBeNull();
   fireEvent.click(screen.getByRole("button", { name: "Edit" }));
   expect(onRequestEdit).toHaveBeenCalledOnce();

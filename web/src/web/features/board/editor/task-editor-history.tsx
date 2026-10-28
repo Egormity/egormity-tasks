@@ -8,6 +8,7 @@ import type {
 } from "@/features/board/data/task-data";
 
 import { boardText } from "@/features/board/i18n/board-copy";
+import { formatBoardTimestamp } from "@/features/board/i18n/board-time";
 import {
   formatTrackerEventChange,
   getTrackerEventFieldLabel,
@@ -75,6 +76,50 @@ const getLegacyEventText = (event: TrackerEvent, columns: readonly BoardColumn[]
   return null;
 };
 
+type HistoryEntryProps = {
+  readonly columns: readonly BoardColumn[];
+  readonly event: TrackerEvent;
+};
+
+export const HistoryEntry = ({ columns, event }: HistoryEntryProps) => {
+  const changes = getEventChanges(event);
+  const legacyText = getLegacyEventText(event, columns);
+
+  return (
+    <article className="border-line bg-board-canvas/60 rounded-lg border px-3 py-2.5">
+      <div className="flex gap-2.5">
+        <span
+          aria-hidden="true"
+          className="bg-board-history-surface text-board-icon mt-0.5 grid size-7 shrink-0 place-items-center rounded-full"
+        >
+          <History className="size-3.5" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <header className="mb-1 flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+            <span className="text-board-heading text-xs font-semibold">
+              {getEventLabel(event.type)}
+            </span>
+            <time className="text-board-muted text-[0.72rem]" dateTime={event.createdAt}>
+              {formatBoardTimestamp(event.createdAt)}
+            </time>
+          </header>
+          {changes.length > 0 ? (
+            <ul className="text-board-secondary text-xs leading-5">
+              {changes.map((change, index) => (
+                <li className="wrap-anywhere" key={`${event.id}-change-${index}`}>
+                  {formatTrackerEventChange(change, columns)}
+                </li>
+              ))}
+            </ul>
+          ) : legacyText ? (
+            <p className="text-board-secondary wrap-anywhere text-xs leading-5">{legacyText}</p>
+          ) : null}
+        </div>
+      </div>
+    </article>
+  );
+};
+
 export const TaskEditorHistory = ({ events, columns }: TaskEditorHistoryProps) => {
   const [isOpen, setIsOpen] = useState(false);
 
@@ -120,42 +165,9 @@ export const TaskEditorHistory = ({ events, columns }: TaskEditorHistoryProps) =
           id="task-history-content"
         >
           {events.length > 0 ? (
-            events.map((event) => {
-              const changes = getEventChanges(event);
-              const legacyText = getLegacyEventText(event, columns);
-              return (
-                <div
-                  className="bg-board-surface/70 space-y-1 rounded-md p-2 text-[11px]"
-                  key={event.id}
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <span className="text-board-event-text font-medium">
-                      {getEventLabel(event.type)}
-                    </span>
-                    <time
-                      className="text-board-subtle shrink-0 text-[10px]"
-                      dateTime={event.createdAt}
-                    >
-                      {new Date(event.createdAt).toLocaleString(document.documentElement.lang, {
-                        dateStyle: "short",
-                        timeStyle: "short",
-                      })}
-                    </time>
-                  </div>
-                  {changes.length > 0 ? (
-                    <ul className="text-board-text space-y-1">
-                      {changes.map((change, index) => (
-                        <li className="leading-4" key={`${event.id}-change-${index}`}>
-                          {formatTrackerEventChange(change, columns)}
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    legacyText && <p className="text-board-text leading-4">{legacyText}</p>
-                  )}
-                </div>
-              );
-            })
+            events.map((event) => (
+              <HistoryEntry key={event.id} columns={columns} event={event} />
+            ))
           ) : (
             <p className="text-board-subtle text-xs">{boardText("История пока пуста")}</p>
           )}

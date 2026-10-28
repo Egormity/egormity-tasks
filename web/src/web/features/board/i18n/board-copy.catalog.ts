@@ -15,6 +15,12 @@ export const boardEnglish: Readonly<Record<string, string>> = {
   Ссылка: "Link",
   "Начните обсуждение. Поддерживается Markdown.":
     "Start the discussion. Markdown is supported.",
+  История: "History",
+  Активность: "Activity",
+  "Лента активности": "Activity feed",
+  "Включите комментарии или историю, чтобы увидеть активность.":
+    "Turn on Comments or History to see activity.",
+  "Пока нет комментариев и событий.": "No comments or events yet.",
   "Добавлен комментарий": "Comment added",
   "Экспортировать все задачи колонки «{0}»": "Export all tasks in “{0}”",
   "Подготовка архива…": "Preparing archive…",

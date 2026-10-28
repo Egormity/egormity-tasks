@@ -19,7 +19,8 @@ copy; `board-theme.css` gives the original colors named tokens and dark equivale
 controls belong to the workspace navigation. Tasks and Archive are separate direct pages (`/tasks`
 and `/archive`), with Users available to admins.
 Task view omits the attachment section when the task has no attachments.
-Opening a card shows its details, comments, attachments, tags and event history in the task dialog.
+Opening a card shows its details, attachments, tags and a combined comments/history activity feed in
+the task dialog.
 `editor/use-task-editor.tsx` owns view/edit, archive and export actions. The drag handle remains
 independent on the right.
 On phones the toolbar keeps task search available at full width. Tag management uses compact rows and
@@ -40,10 +41,15 @@ broadcast does not observe direct database writes by other processes.
 `data/tracker-query.ts` holds one snapshot query shared by cards, archive, search and tags. Filtering is
 local. SSE notifications and local saves coalesce; changes arriving during a read cause a follow-up
 refresh, so updates are not lost. Successful mutations still await a refresh, even if SSE is offline.
-Task history is cached by task ID and revision and reread when that revision changes.
-Comments in `comments/TaskComments.tsx` also use task ID/revision and retain their input across live
-updates. The task view shows comments with preview/download attachments; multipart writes commit
-text and files together and retain the draft after failure. Exports include comments and their files.
+Comments in `activity/TaskActivity.tsx` are cached by task ID/revision and retain their input across
+live updates. The view exposes Comments and History toggles (Comments on by default) that share one
+activity feed; with both enabled, comments and events interleave chronologically, while History
+alone shows only events. Comment-added events are hidden while comments are visible (the comment is
+already the entry) and reappear in History alone. Comments keep preview/download attachments;
+multipart writes commit text and files together and retain the draft after failure. Exports include
+comments and their files.
+The edit view keeps the collapsible history section in `editor/task-editor-history.tsx`, whose
+`HistoryEntry` card is reused by the activity feed.
 Task descriptions and comment bodies render GitHub-flavored Markdown through
 `@/shared/markdown/MarkdownText.tsx` (`react-markdown` with GFM and hard line breaks; raw HTML is
 dropped and links open in a new tab) with themed typography for lists, quotes, tables and code.

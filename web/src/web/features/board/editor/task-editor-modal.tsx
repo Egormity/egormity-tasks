@@ -36,7 +36,7 @@ import { TaskTagManagerModal } from "@/features/board/tags/task-tag-manager-moda
 import type { TrackerTag, TrackerTagUpdate } from "@/features/board/data/tracker-api";
 
 import { boardText } from "@/features/board/i18n/board-copy";
-import { TaskComments } from "../comments/TaskComments";
+import { TaskActivity } from "../activity/TaskActivity";
 
 export type TaskEditorValues = {
   readonly attachmentFiles: ReadonlyMap<string, File>;
@@ -266,7 +266,14 @@ export const TaskEditorModal = ({
                           />
                         </section>
                       )}
-                      {task && <TaskComments key={task.id} cardId={task.id} />}
+                      {task && (
+                        <TaskActivity
+                          key={task.id}
+                          cardId={task.id}
+                          columns={columns}
+                          events={events}
+                        />
+                      )}
                     </section>
 
                     <aside className="min-w-0 space-y-4 lg:pl-4">
@@ -276,7 +283,6 @@ export const TaskEditorModal = ({
                         selectedTagIds={appliedTagIds}
                         tags={tags}
                       />
-                      {task && <TaskEditorHistory columns={columns} events={events} />}
                     </aside>
                   </>
                 ) : (

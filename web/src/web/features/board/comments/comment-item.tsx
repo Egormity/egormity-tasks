@@ -2,6 +2,7 @@ import type { TaskComment } from "@contracts/task-comments.js";
 
 import { MarkdownText } from "@/shared/markdown/MarkdownText";
 import { TaskAttachmentsCarousel } from "../attachments/task-attachments-carousel";
+import { formatBoardTimestamp } from "../i18n/board-time";
 
 const initials = (name: string) => {
   const letters = name
@@ -11,15 +12,6 @@ const initials = (name: string) => {
     .map((part) => Array.from(part)[0] ?? "")
     .join("");
   return letters.toLocaleUpperCase() || "?";
-};
-
-const formatCommentTime = (value: string) => {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "";
-  return date.toLocaleString(document.documentElement.lang, {
-    dateStyle: "medium",
-    timeStyle: "short",
-  });
 };
 
 type CommentItemProps = {
@@ -42,7 +34,7 @@ export const CommentItem = ({ cardId, comment }: CommentItemProps) => (
             {comment.author.name}
           </span>
           <time className="text-board-muted text-[0.72rem]" dateTime={comment.createdAt}>
-            {formatCommentTime(comment.createdAt)}
+            {formatBoardTimestamp(comment.createdAt)}
           </time>
         </header>
         {comment.text && <MarkdownText className="text-xs" text={comment.text} />}
