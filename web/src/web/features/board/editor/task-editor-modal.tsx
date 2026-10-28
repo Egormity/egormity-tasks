@@ -30,7 +30,6 @@ import {
   TaskAttachmentsCarousel,
   TaskEditorAttachments,
 } from "@/features/board/attachments/task-editor-attachments";
-import { TaskEditorHistory } from "./task-editor-history";
 import { TaskEditorTags } from "@/features/board/tags/task-editor-tags";
 import { TaskTagChips } from "@/features/board/tags/task-tag-chips";
 import { TaskTagManagerModal } from "@/features/board/tags/task-tag-manager-modal";
@@ -357,10 +356,7 @@ export const TaskEditorModal = ({
                             className="text-board-text text-xs font-medium"
                             htmlFor="task-description-editor"
                           >
-                            {boardText("Описание")}{" "}
-                            <span className="text-board-placeholder font-normal">
-                              {boardText("(необязательно)")}
-                            </span>
+                            {boardText("Описание")}
                           </label>
                           <span className="text-board-subtle shrink-0 text-xs tabular-nums">
                             {Math.min(description.length, 8000)}/8000
@@ -392,8 +388,6 @@ export const TaskEditorModal = ({
                         selectedTagIds={appliedTagIds}
                         tags={tags}
                       />
-
-                      {task && <TaskEditorHistory columns={columns} events={events} />}
                     </aside>
                   </>
                 )}

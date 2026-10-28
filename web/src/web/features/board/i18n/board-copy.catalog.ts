@@ -183,7 +183,6 @@ export const boardEnglish: Readonly<Record<string, string>> = {
   Описание: "Description",
   "Описание не добавлено.": "No description added.",
   "Например, подготовить макет главного экрана": "For example, design the home screen",
-  "(необязательно)": "(optional)",
   "Коротко опишите контекст, ожидаемый результат и важные ограничения.":
     "Briefly describe the context, expected outcome, and key constraints.",
   Закрыть: "Close",

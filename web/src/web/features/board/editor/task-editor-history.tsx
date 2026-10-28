@@ -1,5 +1,4 @@
-import { ChevronDown, History } from "lucide-react";
-import { useState } from "react";
+import { History } from "lucide-react";
 
 import type {
   BoardColumn,
@@ -14,11 +13,6 @@ import {
   getTrackerEventFieldLabel,
   getTrackerStatusLabel,
 } from "./task-editor-history-format";
-
-type TaskEditorHistoryProps = {
-  readonly columns: readonly BoardColumn[];
-  readonly events: readonly TrackerEvent[];
-};
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
@@ -117,62 +111,5 @@ export const HistoryEntry = ({ columns, event }: HistoryEntryProps) => {
         </div>
       </div>
     </article>
-  );
-};
-
-export const TaskEditorHistory = ({ events, columns }: TaskEditorHistoryProps) => {
-  const [isOpen, setIsOpen] = useState(false);
-
-  return (
-    <section
-      aria-labelledby="task-history-heading"
-      className="border-board-section-border border-t pt-3"
-    >
-      <button
-        aria-controls="task-history-content"
-        aria-expanded={isOpen}
-        className="group hover:bg-board-canvas focus-visible:ring-board-accent flex w-full items-center justify-between gap-2 rounded-md px-1 py-1 text-left transition focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
-        onClick={() => setIsOpen((current) => !current)}
-        type="button"
-      >
-        <span className="flex items-center gap-2">
-          <span className="bg-board-history-surface text-board-icon grid size-7 place-items-center rounded-md">
-            <History aria-hidden="true" className="size-3.5" />
-          </span>
-          <span>
-            <span
-              className="text-board-text block text-xs font-semibold"
-              id="task-history-heading"
-            >
-              {boardText("История событий")}
-            </span>
-            <span className="text-board-subtle mt-0.5 block text-[10px]">
-              {events.length > 0
-                ? boardText("{0} событий", events.length)
-                : boardText("Событий пока нет")}
-            </span>
-          </span>
-        </span>
-        <ChevronDown
-          aria-hidden="true"
-          className={`text-board-icon group-hover:text-board-accent-hover size-3.5 transition-transform ${isOpen ? "rotate-180" : ""}`}
-        />
-      </button>
-
-      {isOpen && (
-        <div
-          className="border-board-attachment-border bg-board-canvas mt-2 max-h-48 space-y-1 overflow-y-auto rounded-lg border p-2"
-          id="task-history-content"
-        >
-          {events.length > 0 ? (
-            events.map((event) => (
-              <HistoryEntry key={event.id} columns={columns} event={event} />
-            ))
-          ) : (
-            <p className="text-board-subtle text-xs">{boardText("История пока пуста")}</p>
-          )}
-        </div>
-      )}
-    </section>
   );
 };

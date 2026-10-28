@@ -66,6 +66,8 @@ it("keeps the original separate read and edit views, saving title and descriptio
       "Original description",
     ),
   );
+  expect(screen.queryByText("(optional)")).toBeNull();
+  expect(screen.queryByText("Event history")).toBeNull();
   fireEvent.change(screen.getByLabelText(/Title/), { target: { value: "Updated task" } });
   fireEvent.change(screen.getByLabelText("Task description"), {
     target: { value: "**Updated** description" },

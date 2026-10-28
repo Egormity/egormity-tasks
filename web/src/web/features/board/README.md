@@ -49,8 +49,8 @@ alone shows only events. Comment-added events are hidden while comments are visi
 already the entry) and reappear in History alone. The composer sits above the feed, so it precedes
 history entries. Comments keep preview/download attachments; multipart writes commit text and files
 together and retain the draft after failure. Exports include comments and their files.
-The edit view keeps the collapsible history section in `editor/task-editor-history.tsx`, whose
-`HistoryEntry` card is reused by the activity feed.
+Event cards in `editor/task-editor-history.tsx` (`HistoryEntry`) are reused by the activity feed;
+history is not shown in the edit view.
 Task descriptions and comment bodies render GitHub-flavored Markdown through
 `@/shared/markdown/MarkdownText.tsx` (`react-markdown` with GFM and hard line breaks; raw HTML is
 dropped and links open in a new tab) with themed typography for lists, quotes, tables and code.
