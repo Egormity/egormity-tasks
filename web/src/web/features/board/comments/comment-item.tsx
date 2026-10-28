@@ -1,7 +1,7 @@
 import type { TaskComment } from "@contracts/task-comments.js";
 
+import { MarkdownText } from "@/shared/markdown/MarkdownText";
 import { TaskAttachmentsCarousel } from "../attachments/task-attachments-carousel";
-import { CommentMarkdown } from "./comment-markdown";
 
 const initials = (name: string) => {
   const letters = name
@@ -45,7 +45,7 @@ export const CommentItem = ({ cardId, comment }: CommentItemProps) => (
             {formatCommentTime(comment.createdAt)}
           </time>
         </header>
-        {comment.text && <CommentMarkdown text={comment.text} />}
+        {comment.text && <MarkdownText className="text-xs" text={comment.text} />}
         {comment.attachments.length > 0 && (
           <div className="mt-2">
             <TaskAttachmentsCarousel

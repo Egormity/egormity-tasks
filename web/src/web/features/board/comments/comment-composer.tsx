@@ -1,37 +1,11 @@
 import { useRef, useState } from "react";
-import {
-  Bold,
-  Code,
-  Italic,
-  Link,
-  List,
-  LoaderCircle,
-  Paperclip,
-  Send,
-  type LucideIcon,
-} from "lucide-react";
+import { LoaderCircle, Paperclip, Send } from "lucide-react";
 import { commentLimits } from "@contracts/task-comments.js";
 import { DraftAttachments } from "@/shared/ui/DraftAttachments";
 import { useAutosizeTextarea } from "@/shared/ui/useAutosizeTextarea";
 import { boardText } from "../i18n/board-copy";
-import { applyCommentFormat, type CommentFormat } from "./comment-format";
-
-type FormatAction = {
-  readonly format: CommentFormat;
-  readonly icon: LucideIcon;
-  readonly label: string;
-};
-
-const formatActions: readonly FormatAction[] = [
-  { format: "bold", icon: Bold, label: "Жирный" },
-  { format: "italic", icon: Italic, label: "Курсив" },
-  { format: "code", icon: Code, label: "Код" },
-  { format: "link", icon: Link, label: "Ссылка" },
-  { format: "list", icon: List, label: "Маркированный список" },
-];
-
-const formatButtonClassName =
-  "text-board-icon hover:bg-board-input-surface hover:text-board-accent focus-visible:ring-board-accent grid size-6 place-items-center rounded-sm transition-colors focus-visible:ring-2 focus-visible:outline-none disabled:opacity-40";
+import { applyMarkdownFormat, type MarkdownFormat } from "../markdown/markdown-format";
+import { MarkdownToolbar } from "../markdown/MarkdownToolbar";
 
 type CommentComposerProps = {
   readonly onSubmit: (text: string, files: File[]) => Promise<void>;
@@ -80,15 +54,16 @@ export const CommentComposer = ({ onSubmit }: CommentComposerProps) => {
     }
   };
 
-  const format = (kind: CommentFormat) => {
+  const format = (kind: MarkdownFormat) => {
     const input = textarea.current;
     if (!input || pending) return;
-    const edit = applyCommentFormat(
+    const edit = applyMarkdownFormat(
       input.value,
       input.selectionStart,
       input.selectionEnd,
       kind,
     );
+    if (edit.value.length > commentLimits.maxText) return;
     setText(edit.value);
     requestAnimationFrame(() => {
       input.focus();
@@ -110,25 +85,7 @@ export const CommentComposer = ({ onSubmit }: CommentComposerProps) => {
         }}
       >
         <div className="border-line/70 flex items-center gap-1 border-b px-1.5 py-1">
-          <div
-            aria-label={boardText("Инструменты форматирования")}
-            className="flex items-center gap-0.5"
-            role="group"
-          >
-            {formatActions.map(({ format: kind, icon: Icon, label }) => (
-              <button
-                key={kind}
-                aria-label={boardText(label)}
-                className={formatButtonClassName}
-                disabled={pending}
-                title={boardText(label)}
-                type="button"
-                onClick={() => format(kind)}
-              >
-                <Icon aria-hidden="true" size={13} />
-              </button>
-            ))}
-          </div>
+          <MarkdownToolbar disabled={pending} onFormat={format} />
           <span className="text-board-subtle ml-auto pr-1 text-[0.7rem] tracking-wide">
             Markdown
           </span>

@@ -49,6 +49,7 @@ it("keeps the original separate read and edit views, saving title and descriptio
   );
   expect(screen.getByRole("dialog").textContent).toContain("View task");
   expect(screen.getByRole("heading", { name: "Original task" })).toBeTruthy();
+  expect(screen.getByText("Original description")).toBeTruthy();
   expect(screen.getByRole("textbox", { name: "Comment" })).toBeTruthy();
   expect(screen.queryByRole("textbox", { name: /Title/ })).toBeNull();
   fireEvent.click(screen.getByRole("button", { name: "Edit" }));
@@ -59,15 +60,20 @@ it("keeps the original separate read and edit views, saving title and descriptio
     </QueryClientProvider>,
   );
   await waitFor(() =>
-    expect(screen.getByLabelText("Task description").textContent).toBe("Original description"),
+    expect(screen.getByLabelText<HTMLTextAreaElement>("Task description").value).toBe(
+      "Original description",
+    ),
   );
   fireEvent.change(screen.getByLabelText(/Title/), { target: { value: "Updated task" } });
+  fireEvent.change(screen.getByLabelText("Task description"), {
+    target: { value: "**Updated** description" },
+  });
   fireEvent.click(screen.getByRole("checkbox", { name: "Select tag Platform" }));
   fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
   expect(onSave).toHaveBeenCalledWith(
     expect.objectContaining({
       title: "Updated task",
-      description: "Original description",
+      description: "**Updated** description",
       tagIds: ["tag"],
     }),
   );
@@ -106,5 +112,31 @@ it("defaults new tasks to Backlog and saves the selected column", () => {
   fireEvent.click(screen.getByRole("button", { name: "Create task" }));
 
   expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ status: "customStage" }));
+  client.clear();
+});
+
+it("renders the task description as markdown in view mode", () => {
+  document.documentElement.lang = "en";
+  const client = new QueryClient();
+  render(
+    <QueryClientProvider client={client}>
+      <TaskEditorModal
+        events={[]}
+        mode="view"
+        onOpenChange={vi.fn()}
+        onCreateTag={vi.fn()}
+        onDeleteTag={vi.fn()}
+        onRequestEdit={vi.fn()}
+        onSave={vi.fn()}
+        onUpdateTag={vi.fn()}
+        open
+        tags={[]}
+        task={{ ...task, description: "**Bold** description with `code`." }}
+      />
+    </QueryClientProvider>,
+  );
+
+  expect(screen.getByText("Bold").tagName).toBe("STRONG");
+  expect(screen.getByText("code").tagName).toBe("CODE");
   client.clear();
 });

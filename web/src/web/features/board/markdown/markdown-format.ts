@@ -1,6 +1,6 @@
-export type CommentFormat = "bold" | "italic" | "code" | "link" | "list";
+export type MarkdownFormat = "bold" | "italic" | "code" | "link" | "list";
 
-export type CommentEdit = {
+export type MarkdownEdit = {
   readonly value: string;
   readonly selectionEnd: number;
   readonly selectionStart: number;
@@ -13,7 +13,7 @@ const replaceSelection = (
   insertion: string,
   selectionOffset: number,
   selectionLength: number,
-): CommentEdit => ({
+): MarkdownEdit => ({
   value: value.slice(0, start) + insertion + value.slice(end),
   selectionStart: start + selectionOffset,
   selectionEnd: start + selectionOffset + selectionLength,
@@ -24,7 +24,7 @@ const wrapSelection = (
   start: number,
   end: number,
   marker: string,
-): CommentEdit => {
+): MarkdownEdit => {
   const selected = value.slice(start, end);
   return replaceSelection(
     value,
@@ -36,7 +36,7 @@ const wrapSelection = (
   );
 };
 
-const prefixList = (value: string, start: number, end: number): CommentEdit => {
+const prefixList = (value: string, start: number, end: number): MarkdownEdit => {
   const lineStart = value.lastIndexOf("\n", start - 1) + 1;
   const lineBreak = value.indexOf("\n", end);
   const lineEnd = lineBreak === -1 ? value.length : lineBreak;
@@ -57,14 +57,14 @@ const prefixList = (value: string, start: number, end: number): CommentEdit => {
 
 /**
  * Applies a Markdown command to a textarea value and returns the next value plus
- * the range that should stay selected. Pure so the composer stays presentational.
+ * the range that should stay selected. Pure so editors stay presentational.
  */
-export const applyCommentFormat = (
+export const applyMarkdownFormat = (
   value: string,
   selectionStart: number,
   selectionEnd: number,
-  format: CommentFormat,
-): CommentEdit => {
+  format: MarkdownFormat,
+): MarkdownEdit => {
   const start = Math.min(selectionStart, selectionEnd);
   const end = Math.max(selectionStart, selectionEnd);
   const selected = value.slice(start, end);

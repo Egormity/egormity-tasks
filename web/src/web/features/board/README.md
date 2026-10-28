@@ -2,8 +2,8 @@
 
 Copied on 2026-10-11 from project `7ce039e5-ea5e-4f74-906c-51429c3e14ed`,
 `workspace/tasks-web/src/modules/tasks/components/tracker` and `features/tracker`.
-The original source owns the board/card geometry, view/edit dialog composition, rich description
-editor, tag management, attachment carousel/preview,
+The original source owns the board/card geometry, view/edit dialog composition, description
+editing, tag management, attachment carousel/preview,
 and ZIP exports. These are copied components, not a replacement UI inspired by the original.
 
 `data/tracker-api.ts` adapts those components to the independent Operations `/api/board` contract and
@@ -44,11 +44,14 @@ Task history is cached by task ID and revision and reread when that revision cha
 Comments in `comments/TaskComments.tsx` also use task ID/revision and retain their input across live
 updates. The task view shows comments with preview/download attachments; multipart writes commit
 text and files together and retain the draft after failure. Exports include comments and their files.
-Comment bodies render GitHub-flavored Markdown (`react-markdown` with GFM and hard line breaks;
-raw HTML is dropped and links open in a new tab) with themed typography for lists, quotes, tables
-and code. `comments/comment-item.tsx` shows author initials and a localized timestamp;
-`comments/comment-composer.tsx` owns the draft, files and formatting toolbar, while
-`comments/comment-format.ts` holds the pure Markdown insertion helpers.
+Task descriptions and comment bodies render GitHub-flavored Markdown through
+`@/shared/markdown/MarkdownText.tsx` (`react-markdown` with GFM and hard line breaks; raw HTML is
+dropped and links open in a new tab) with themed typography for lists, quotes, tables and code.
+Descriptions are authored in the Markdown textarea of `editor/task-description-editor.tsx`;
+existing plain-text descriptions remain valid. Both editors share `markdown/MarkdownToolbar.tsx`
+and the pure insertion helpers in `markdown/markdown-format.ts`. `comments/comment-item.tsx` shows
+author initials and a localized timestamp; `comments/comment-composer.tsx` owns the comment draft,
+attached files and send controls.
 `BoardStore` persists the ordered, editable column list and titled dividers with their current column
 and mixed-item order in PostgreSQL's `board_settings` JSON rows. It seeds the default array only when no saved setting exists, so changes
 survive API restarts without a versioned database migration. The API-owned defaults and validation

@@ -2,7 +2,7 @@ import Markdown, { type Components } from "react-markdown";
 import remarkBreaks from "remark-breaks";
 import remarkGfm from "remark-gfm";
 
-import "./comment-markdown.css";
+import "./markdown-text.css";
 
 const components: Components = {
   a: ({ children, href, title }) => (
@@ -24,8 +24,13 @@ const components: Components = {
   img: ({ alt, src, title }) => <img alt={alt ?? ""} loading="lazy" src={src} title={title} />,
 };
 
-export const CommentMarkdown = ({ text }: { text: string }) => (
-  <div className="comment-markdown text-xs">
+type MarkdownTextProps = {
+  readonly className?: string | undefined;
+  readonly text: string;
+};
+
+export const MarkdownText = ({ className, text }: MarkdownTextProps) => (
+  <div className={className ? `markdown-text ${className}` : "markdown-text"}>
     <Markdown remarkPlugins={[remarkGfm, remarkBreaks]} skipHtml components={components}>
       {text}
     </Markdown>

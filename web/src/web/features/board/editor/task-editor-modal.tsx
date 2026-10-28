@@ -2,6 +2,7 @@ import { Archive, Download, LoaderCircle, X } from "lucide-react";
 import { type ClipboardEvent, type FormEvent, useCallback, useState } from "react";
 import { useDropzone } from "react-dropzone";
 
+import { MarkdownText } from "@/shared/markdown/MarkdownText";
 import {
   Modal,
   ModalClose,
@@ -243,7 +244,7 @@ export const TaskEditorModal = ({
                         </h2>
                         <div className="border-board-input-border bg-board-canvas text-board-secondary mt-1.5 min-h-20 rounded-md border px-3 py-2 text-xs leading-5">
                           {task?.description ? (
-                            <p className="whitespace-pre-wrap">{task.description}</p>
+                            <MarkdownText text={task.description} />
                           ) : (
                             <p className="text-board-subtle">
                               {boardText("Описание не добавлено.")}

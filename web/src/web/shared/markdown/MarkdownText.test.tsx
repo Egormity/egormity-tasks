@@ -1,13 +1,13 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, expect, it } from "vitest";
-import { CommentMarkdown } from "./comment-markdown";
+import { MarkdownText } from "./MarkdownText";
 
 afterEach(cleanup);
 
 it("renders GFM markdown as formatted content", () => {
   const { container } = render(
-    <CommentMarkdown
+    <MarkdownText
       text={[
         "**Bold** and *italic* with `inline` code.",
         "",
@@ -38,7 +38,7 @@ it("renders GFM markdown as formatted content", () => {
 
 it("keeps raw HTML and unsafe links inert", () => {
   const { container } = render(
-    <CommentMarkdown
+    <MarkdownText
       text={
         "<script>alert(1)</script>\n\n<img src=x onerror=alert(1)>\n\n[bad](javascript:alert(1))"
       }
