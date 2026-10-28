@@ -19,6 +19,7 @@ export const boardEnglish: Readonly<Record<string, string>> = {
   "Настроить колонку": "Configure column",
   "Добавить колонку": "Add column",
   "Добавить разделитель": "Add divider",
+  "Создать разделитель": "Create divider",
   "Раздел {0}": "Section {0}",
   "Раздел добавлен": "Section added",
   Разделители: "Dividers",
@@ -41,6 +42,8 @@ export const boardEnglish: Readonly<Record<string, string>> = {
   "Не удалось сохранить колонку": "Could not save the column",
   "Не удалось изменить порядок колонок": "Could not reorder columns",
   "Переместите задачи перед удалением колонки": "Move tasks before deleting this column",
+  "Переместите задачи и разделители перед удалением колонки":
+    "Move tasks and dividers before deleting this column",
   "Уберите содержимое перед удалением колонки":
     "Move tasks and remove dividers before deleting this column",
   "Удалить разделитель": "Remove divider",
@@ -69,7 +72,9 @@ export const boardEnglish: Readonly<Record<string, string>> = {
   "Задача создана, но не удалось сохранить вложение":
     "Task created, but an attachment could not be uploaded",
   "Не удалось переместить задачу": "Could not move the task",
+  "Не удалось переместить разделитель": "Could not move the divider",
   "Задача перемещена в «{0}»": "Task moved to “{0}”",
+  "Разделитель перемещен в «{0}»": "Divider moved to “{0}”",
   "Тег «{0}» создан": "Tag “{0}” created",
   "Не удалось создать тег": "Could not create the tag",
   "Тег «{0}» изменён": "Tag “{0}” updated",
@@ -118,6 +123,7 @@ export const boardEnglish: Readonly<Record<string, string>> = {
     "Remove “{0}” from this task’s attachments?",
   "Удалить вложение?": "Remove attachment?",
   "Переместить задачу: {0}": "Move task: {0}",
+  "Переместить разделитель: {0}": "Move divider: {0}",
   "{0} вложений": "{0} attachments",
   "Восстановление…": "Restoring…",
   Восстановить: "Restore",

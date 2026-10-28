@@ -5,6 +5,7 @@ import {
   getKeyboardDropTarget,
   getOrderedColumnItems,
   getOrderedColumnTasks,
+  moveBoardItem,
   moveBoardTask,
 } from "./task-board-order";
 import { boardColumns, type Task, type TaskStatus } from "@/features/board/data/task-data";
@@ -108,6 +109,47 @@ describe("board insertion order", () => {
       "c",
       "b",
     ]);
+  });
+
+  it("moves a divider within and between columns while reindexing the mixed sequence", () => {
+    const interleavedTasks = tasks.map((task) =>
+      task.status === "queue"
+        ? { ...task, order: task.id === "a" ? 0 : task.id === "b" ? 2 : 3 }
+        : task,
+    );
+    const section: BoardDivider = {
+      id: "section",
+      title: "Ready for release",
+      columnId: "queue",
+      order: 1,
+    };
+    const withinColumn = moveBoardItem(interleavedTasks, [section], section.id, {
+      status: "queue",
+      beforeId: "c",
+    });
+    expect(
+      getOrderedColumnItems(withinColumn.tasks, withinColumn.dividers, "queue").map(
+        (item) => item.id,
+      ),
+    ).toEqual(["a", "b", "section", "c"]);
+    expect(withinColumn.dividers[0]).toMatchObject({ columnId: "queue", order: 2 });
+
+    const acrossColumns = moveBoardItem(interleavedTasks, [section], section.id, {
+      status: "review",
+      beforeId: "y",
+    });
+    expect(
+      getOrderedColumnItems(acrossColumns.tasks, acrossColumns.dividers, "queue").map(
+        (item) => item.id,
+      ),
+    ).toEqual(["a", "b", "c"]);
+    expect(
+      getOrderedColumnItems(acrossColumns.tasks, acrossColumns.dividers, "review").map(
+        (item) => item.id,
+      ),
+    ).toEqual(["x", "section", "y"]);
+    expect(acrossColumns.dividers[0]).toMatchObject({ columnId: "review", order: 1 });
+    expect(acrossColumns.tasks.find(({ id }) => id === "y")?.order).toBe(2);
   });
 
   it("includes user-defined columns in drag and keyboard destinations", () => {

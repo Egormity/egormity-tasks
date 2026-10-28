@@ -13,7 +13,6 @@ it("keeps column settings compact, lets the user pick a color, reorder sideways,
   document.documentElement.lang = "en";
   const onMove = vi.fn();
   const onExport = vi.fn();
-  const onAddDivider = vi.fn();
   const onEditDivider = vi.fn();
   const onRemoveDivider = vi.fn();
   const onSave = vi.fn();
@@ -30,7 +29,6 @@ it("keeps column settings compact, lets the user pick a color, reorder sideways,
       onOpenChange={vi.fn()}
       onMove={onMove}
       onExport={onExport}
-      onAddDivider={onAddDivider}
       onDelete={vi.fn()}
       onSave={onSave}
       onEditDivider={onEditDivider}
@@ -46,10 +44,9 @@ it("keeps column settings compact, lets the user pick a color, reorder sideways,
   fireEvent.click(screen.getByRole("button", { name: "Move column left" }));
   fireEvent.click(screen.getByRole("button", { name: "Move column right" }));
   fireEvent.click(screen.getByRole("button", { name: "Download column tasks (2)" }));
-  fireEvent.click(screen.getByRole("button", { name: "Add divider" }));
   expect(onMove.mock.calls).toEqual([[-1], [1]]);
   expect(onExport).toHaveBeenCalledOnce();
-  expect(onAddDivider).toHaveBeenCalledOnce();
+  expect(screen.queryByRole("button", { name: "Add divider" })).toBeNull();
   expect(screen.getByRole("list", { name: "Dividers" }).tagName).toBe("UL");
   fireEvent.change(screen.getByRole("textbox", { name: "Section title" }), {
     target: { value: "Ready to ship" },

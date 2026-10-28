@@ -32,7 +32,7 @@ export const getPointerDropTarget = (
   manager: DragDropManager,
   tasks: readonly Task[],
   dividers: readonly BoardDivider[],
-  taskId: string,
+  itemId: string,
   point: Point = manager.dragOperation.position.current,
   columns: readonly BoardColumn[] = boardColumns,
 ): BoardDropTarget | null => {
@@ -45,7 +45,7 @@ export const getPointerDropTarget = (
       ),
     );
     const before = getOrderedColumnItems(tasks, dividers, status).find((item) => {
-      if (item.id === taskId) return false;
+      if (item.id === itemId) return false;
       const rect = elements.get(item.id)?.getBoundingClientRect();
       return rect && point.y < rect.top + rect.height / 2;
     });
@@ -57,9 +57,9 @@ export const getPointerDropTarget = (
 export const moveKeyboardOverlay = (manager: DragDropManager, target: BoardDropTarget) => {
   const column = manager.registry.droppables.get(target.status)?.element;
   if (!column) return;
-  const cards = Array.from(column.querySelectorAll<HTMLElement>("[data-board-order-item-id]"));
+  const items = Array.from(column.querySelectorAll<HTMLElement>("[data-board-order-item-id]"));
   const anchor =
-    cards.find((card) => card.dataset.boardOrderItemId === target.beforeId) ?? cards.at(-1);
+    items.find((item) => item.dataset.boardOrderItemId === target.beforeId) ?? items.at(-1);
   (anchor ?? column).scrollIntoView({ block: "nearest", inline: "nearest" });
   const rect = (anchor ?? column).getBoundingClientRect();
   manager.actions.move({

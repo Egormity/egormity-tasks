@@ -9,14 +9,18 @@ import {
   getFullColumnDropTarget,
   getKeyboardDropTarget,
   getOrderedColumnItems,
-  moveBoardTask,
+  moveBoardItem,
+  type BoardColumnItem,
 } from "./task-board-order";
 import { type BoardColumn, type Task, boardColumns } from "@/features/board/data/task-data";
-import type { useUpdateTrackerCard } from "@/features/board/data/tracker-hooks";
+import type {
+  useBoardConfiguration,
+  useUpdateTrackerCard,
+} from "@/features/board/data/tracker-hooks";
 import type { BoardDivider } from "@contracts/board-columns.js";
 
 type DragSession = {
-  readonly source: Task;
+  readonly source: BoardColumnItem;
   readonly tasks: readonly Task[];
   readonly allTasks: readonly Task[];
   readonly dividers: readonly BoardDivider[];
@@ -30,6 +34,7 @@ export const useBoardDrag = (
   allTasks: readonly Task[] | undefined,
   dividers: readonly BoardDivider[],
   updateCard: Pick<ReturnType<typeof useUpdateTrackerCard>, "mutate" | "isPending">,
+  configureBoard: Pick<ReturnType<typeof useBoardConfiguration>, "mutate" | "isPending">,
   columns: readonly BoardColumn[] = boardColumns,
 ) => {
   const session = useRef<DragSession | null>(null);
@@ -70,14 +75,18 @@ export const useBoardDrag = (
       );
   };
   const handleBeforeDragStart: DragDropEventHandlers["onBeforeDragStart"] = (event) => {
-    if (!allTasks || updateCard.isPending || session.current) event.preventDefault();
+    if (!allTasks || updateCard.isPending || configureBoard.isPending || session.current)
+      event.preventDefault();
   };
   const handleDragStart: DragDropEventHandlers["onDragStart"] = (event, manager) => {
-    const source = tasks.find((task) => task.id === event.operation.source?.id);
-    if (!source || source.status === "archived" || !allTasks) return;
-    const column = getOrderedColumnItems(tasks, dividers, source.status);
+    const source = columns
+      .flatMap(({ id }) => getOrderedColumnItems(tasks, dividers, id))
+      .find((item) => item.id === event.operation.source?.id);
+    if (!source || !allTasks) return;
+    const sourceStatus = source.kind === "task" ? source.task.status : source.divider.columnId;
+    const column = getOrderedColumnItems(tasks, dividers, sourceStatus);
     const target = {
-      status: source.status,
+      status: sourceStatus,
       beforeId: column[column.findIndex((item) => item.id === source.id) + 1]?.id ?? null,
     };
     session.current = {
@@ -150,7 +159,7 @@ export const useBoardDrag = (
       target,
       drag.dividers,
     );
-    const next = moveBoardTask(
+    const next = moveBoardItem(
       drag.allTasks,
       drag.dividers,
       drag.source.id,
@@ -166,27 +175,52 @@ export const useBoardDrag = (
     const visibleIds = new Set(drag.tasks.map((task) => task.id));
     setDisplayedTasks(next.tasks.filter((task) => visibleIds.has(task.id)));
     setDisplayedDividers(next.dividers);
-    updateCard.mutate(
-      {
-        id: drag.source.id,
-        input: {
-          revision: drag.source.revision,
-          ...fullTarget,
-        },
+    const callbacks = {
+      onError: () => {
+        toast.error(
+          boardText(
+            drag.source.kind === "task"
+              ? "Не удалось переместить задачу"
+              : "Не удалось переместить разделитель",
+          ),
+        );
+        clear();
       },
-      {
-        onError: () => {
-          toast.error(boardText("Не удалось переместить задачу"));
-          clear();
-        },
-        onSuccess: () => {
-          const label =
-            columns.find((column) => column.id === target.status)?.label ?? target.status;
-          toast.success(boardText("Задача перемещена в «{0}»", boardText(label)));
-          clear();
-        },
+      onSuccess: () => {
+        const label =
+          columns.find((column) => column.id === target.status)?.label ?? target.status;
+        toast.success(
+          boardText(
+            drag.source.kind === "task"
+              ? "Задача перемещена в «{0}»"
+              : "Разделитель перемещен в «{0}»",
+            boardText(label),
+          ),
+        );
+        clear();
       },
-    );
+    };
+    if (drag.source.kind === "task") {
+      updateCard.mutate(
+        {
+          id: drag.source.id,
+          input: {
+            revision: drag.source.task.revision,
+            ...fullTarget,
+          },
+        },
+        callbacks,
+      );
+    } else {
+      configureBoard.mutate(
+        {
+          type: "move-divider",
+          id: drag.source.id,
+          input: { columnId: fullTarget.status, beforeId: fullTarget.beforeId },
+        },
+        callbacks,
+      );
+    }
   };
   return {
     displayedTasks: displayedTasks ?? tasks,

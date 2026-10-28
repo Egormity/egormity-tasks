@@ -2,6 +2,7 @@ import { useDroppable } from "@dnd-kit/react";
 import { Settings2 } from "lucide-react";
 
 import { DraggableTaskCard } from "./task-card";
+import { DraggableBoardDivider } from "./board-divider-row";
 import type { BoardColumn as BoardColumnType, Task } from "@/features/board/data/task-data";
 import type { BoardDivider } from "@contracts/board-columns.js";
 
@@ -30,7 +31,7 @@ export const BoardColumn = ({
   const items = getOrderedColumnItems(tasks, dividers, column.id);
   const { ref } = useDroppable({
     data: { columnId: column.id },
-    accept: "task",
+    accept: ["task", "divider"],
     id: column.id,
     type: "column",
   });
@@ -85,13 +86,7 @@ export const BoardColumn = ({
             {item.kind === "task" ? (
               <DraggableTaskCard dragDisabled={dragDisabled} onOpen={onOpen} task={item.task} />
             ) : (
-              <div className="flex min-h-9 items-center gap-2 px-1" role="separator">
-                <span aria-hidden="true" className="bg-board-divider h-px min-w-3 flex-1" />
-                <span className="text-board-secondary max-w-48 truncate text-center text-[11px]">
-                  {item.divider.title}
-                </span>
-                <span aria-hidden="true" className="bg-board-divider h-px min-w-3 flex-1" />
-              </div>
+              <DraggableBoardDivider dragDisabled={dragDisabled} divider={item.divider} />
             )}
           </div>
         ))}

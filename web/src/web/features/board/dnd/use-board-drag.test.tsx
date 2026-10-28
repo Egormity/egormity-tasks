@@ -10,10 +10,14 @@ import { useLayoutEffect } from "react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
 import { BoardColumn } from "@/features/board/components/board-column";
+import { BoardDividerOverlay } from "@/features/board/components/board-divider-row";
 import { getOrderedColumnTasks } from "./task-board-order";
 import { TaskCard } from "@/features/board/components/task-card";
 import { type Task, boardColumns } from "@/features/board/data/task-data";
-import type { useUpdateTrackerCard } from "@/features/board/data/tracker-hooks";
+import type {
+  useBoardConfiguration,
+  useUpdateTrackerCard,
+} from "@/features/board/data/tracker-hooks";
 import type { BoardDivider } from "@contracts/board-columns.js";
 import { useBoardDrag } from "./use-board-drag";
 
@@ -39,6 +43,10 @@ let manager: DragDropManager;
 let scrollOffset: number;
 
 const mutate = vi.fn<ReturnType<typeof useUpdateTrackerCard>["mutate"]>();
+const configureBoard = {
+  mutate: vi.fn<ReturnType<typeof useBoardConfiguration>["mutate"]>(),
+  isPending: false,
+} satisfies Pick<ReturnType<typeof useBoardConfiguration>, "mutate" | "isPending">;
 
 const ManagerProbe = () => {
   const value = useDragDropManager();
@@ -55,7 +63,13 @@ const Harness = ({
   readonly items?: Task[];
   readonly dividers?: BoardDivider[];
 }) => {
-  const drag = useBoardDrag(items, items, dividers, { mutate, isPending: false });
+  const drag = useBoardDrag(
+    items,
+    items,
+    dividers,
+    { mutate, isPending: false },
+    configureBoard,
+  );
   return (
     <DragDropProvider
       onBeforeDragStart={drag.handleBeforeDragStart}
@@ -67,7 +81,12 @@ const Harness = ({
     >
       <ManagerProbe />
       <DragOverlay dropAnimation={null}>
-        {(source) => <TaskCard isOverlay task={items.find((task) => task.id === source.id)!} />}
+        {(source) => {
+          const task = items.find((item) => item.id === source.id);
+          if (task) return <TaskCard isOverlay task={task} />;
+          const divider = dividers.find((item) => item.id === source.id);
+          return divider ? <BoardDividerOverlay divider={divider} /> : null;
+        }}
       </DragOverlay>
       {boardColumns.map((column) => (
         <BoardColumn
@@ -89,6 +108,7 @@ const Harness = ({
 
 beforeEach(() => {
   mutate.mockReset();
+  configureBoard.mutate.mockReset();
   scrollOffset = 0;
   // jsdom has no layout. Model six columns and mixed-height cards; all DnD events,
   // registry, collision detection, React rendering and keyboard sensors are real.
@@ -269,6 +289,96 @@ it("moves a task into the new clarification column before Queue", async () => {
     "clarification",
     "queue",
   ]);
+});
+
+it("moves a divider to another position inside its column", async () => {
+  const interleavedTasks = tasks.map((task) =>
+    task.status === "queue"
+      ? { ...task, order: task.id === "a" ? 0 : task.id === "b" ? 2 : 3 }
+      : task,
+  );
+  const section: BoardDivider = {
+    id: "section",
+    title: "Release",
+    columnId: "queue",
+    order: 1,
+  };
+  render(<Harness items={interleavedTasks} dividers={[section]} />);
+  await start("section");
+  await move(820, 370);
+  await stop();
+
+  expect(configureBoard.mutate).toHaveBeenCalledExactlyOnceWith(
+    {
+      type: "move-divider",
+      id: "section",
+      input: { columnId: "queue", beforeId: "c" },
+    },
+    expect.any(Object),
+  );
+  expect(columnItemIds("queue")).toEqual(["a", "b", "section", "c"]);
+});
+
+it("moves a divider between columns and keeps it among the same ordered items", async () => {
+  const section: BoardDivider = {
+    id: "section",
+    title: "Release",
+    columnId: "queue",
+    order: 1,
+  };
+  render(<Harness dividers={[section]} />);
+  const separator = screen.getByRole("separator", { name: "Release" });
+  expect(separator.querySelectorAll('span[aria-hidden="true"]')).toHaveLength(2);
+  expect(
+    Array.from(separator.querySelectorAll('span[aria-hidden="true"]')).every((line) =>
+      line.className.includes("h-0.5"),
+    ),
+  ).toBe(true);
+  expect(screen.getByRole("button", { name: "Переместить разделитель: Release" })).toBeTruthy();
+  await start("section");
+  await move(1420, 120);
+  await stop();
+
+  expect(configureBoard.mutate).toHaveBeenCalledExactlyOnceWith(
+    {
+      type: "move-divider",
+      id: "section",
+      input: { columnId: "review", beforeId: "x" },
+    },
+    expect.any(Object),
+  );
+  expect(columnItemIds("queue")).toEqual(["a", "b", "c"]);
+  expect(columnItemIds("review")).toEqual(["section", "x", "y"]);
+});
+
+it("supports keyboard dragging a divider across columns", async () => {
+  const section: BoardDivider = {
+    id: "section",
+    title: "Release",
+    columnId: "queue",
+    order: 1,
+  };
+  render(<Harness dividers={[section]} />);
+  const handle = screen.getByRole("button", { name: "Переместить разделитель: Release" });
+  await interact(() => {
+    fireEvent.keyDown(handle, { key: " ", code: "Space" });
+  });
+  expect(manager.dragOperation.status.dragging).toBe(true);
+  await interact(() => {
+    fireEvent.keyDown(document, { key: "ArrowRight", code: "ArrowRight" });
+  });
+  await interact(() => {
+    fireEvent.keyDown(document, { key: "Enter", code: "Enter" });
+  });
+
+  expect(configureBoard.mutate).toHaveBeenCalledExactlyOnceWith(
+    {
+      type: "move-divider",
+      id: "section",
+      input: { columnId: "inProgress", beforeId: null },
+    },
+    expect.any(Object),
+  );
 });
 
 it("moves to empty columns and ignores background refreshes until the save finishes", async () => {

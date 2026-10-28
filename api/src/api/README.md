@@ -21,10 +21,12 @@ existing username or use the email for older records. Users may subsequently cha
 usernames. Existing sessions with old name/email claims are rejected by the current session contract.
 
 Keep the contract copy under `web/src/api/contracts` synchronized when editing transport schemas.
-`contracts/board-columns.ts` owns the default column list and validation schema; the live ordered
-columns and board-wide dividers are persisted as JSON in PostgreSQL's `board_settings` table. This is
-initialized in place and does not require a versioned migration. Task status values remain strings
-and writes validate against the live column list. Keep IDs stable for existing task references, and
-prevent deletion while any active or archived tasks still reference a column.
+`contracts/board-columns.ts` owns the default column list and validation schemas; the live ordered
+columns and titled dividers, including each divider's current column and mixed-item order, are
+persisted as JSON in PostgreSQL's `board_settings` table. This is initialized in place and does not
+require a versioned migration. Divider moves validate their target column and `beforeId`, then
+reorder source and destination items in one transaction. Task status values remain strings and
+writes validate against the live column list. Keep IDs stable for existing task references, and
+prevent deletion while any active or archived tasks or dividers still reference a column.
 Tag colors preserve the existing named tones while also accepting validated `#RRGGBB` values from
 the Web color picker.

@@ -19,7 +19,11 @@ import type {
   TaskTagTone,
   TrackerEvent,
 } from "./task-data";
-import type { BoardColumn, BoardDivider } from "@contracts/board-columns.js";
+import type {
+  BoardColumn,
+  BoardDivider,
+  BoardDividerMoveInput,
+} from "@contracts/board-columns.js";
 import { boardColumns as defaultBoardColumns } from "@contracts/board-columns.js";
 
 export type TrackerTag = TaskTag & { readonly usageCount: number };
@@ -101,6 +105,9 @@ export const createTrackerDivider = (input: { title: string; columnId: string })
 
 export const updateTrackerDivider = (id: string, title: string) =>
   request<BoardDivider>(`/board/dividers/${encodeURIComponent(id)}`, { title });
+
+export const moveTrackerDivider = (id: string, input: BoardDividerMoveInput) =>
+  request<BoardDivider>(`/board/dividers/${encodeURIComponent(id)}/move`, input);
 
 export const deleteTrackerDivider = (id: string) =>
   request<{ id: string }>(`/board/dividers/${encodeURIComponent(id)}/remove`, {});

@@ -1,4 +1,4 @@
-import { ArrowLeft, ArrowRight, Download, SeparatorHorizontal, Trash2, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, Download, Trash2, X } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import type { BoardDivider } from "@contracts/board-columns.js";
@@ -22,7 +22,6 @@ type BoardColumnSettingsModalProps = {
   readonly onMove: (offset: -1 | 1) => void;
   readonly onDelete: () => void;
   readonly onExport: () => void;
-  readonly onAddDivider: () => void;
   readonly onEditDivider: (divider: BoardDivider, title: string) => void;
   readonly onRemoveDivider: (divider: BoardDivider) => void;
 };
@@ -41,7 +40,6 @@ export const BoardColumnSettingsModal = ({
   onMove,
   onDelete,
   onExport,
-  onAddDivider,
   onEditDivider,
   onRemoveDivider,
 }: BoardColumnSettingsModalProps) => {
@@ -151,16 +149,6 @@ export const BoardColumnSettingsModal = ({
                   exporting ? "Подготовка архива…" : "Скачать задачи колонки ({0})",
                   taskCount,
                 )}
-              </button>
-
-              <button
-                className="border-board-button-border bg-board-surface text-board-button-text hover:bg-board-button-hover inline-flex h-7 items-center gap-1.5 rounded-md border px-2 text-[11px] font-medium disabled:opacity-40"
-                disabled={busy}
-                onClick={onAddDivider}
-                type="button"
-              >
-                <SeparatorHorizontal aria-hidden="true" className="size-3.5" />
-                {boardText("Добавить разделитель")}
               </button>
 
               <button

@@ -5,6 +5,8 @@ import { toast } from "sonner";
 
 import { BoardColumn } from "@/features/board/components/board-column";
 import { BoardColumnSettingsModal } from "@/features/board/components/board-column-settings-modal";
+import { BoardDividerOverlay } from "@/features/board/components/board-divider-row";
+import { CreateDividerDialog } from "@/features/board/components/create-divider-dialog";
 import { getOrderedColumnTasks } from "@/features/board/dnd/task-board-order";
 import { TaskCard } from "@/features/board/components/task-card";
 import type {
@@ -38,6 +40,10 @@ export const BoardPage = ({ archived }: { archived: boolean }) => {
   const [exportingColumnId, setExportingColumnId] = useState<TaskStatus | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [editingColumn, setEditingColumn] = useState<BoardColumnType | null>(null);
+  const [createDividerDraft, setCreateDividerDraft] = useState<{
+    readonly title: string;
+    readonly columnId: string;
+  } | null>(null);
   const boardQuery = useQuery(trackerBoardQuery);
   const cardsQuery = useTrackerCards(archived ? "archived" : "active", search.trim());
   const allCardsQuery = useTrackerCards("active", "");
@@ -59,7 +65,14 @@ export const BoardPage = ({ archived }: { archived: boolean }) => {
     handleDragMove,
     handleDragOver,
     handleDragEnd,
-  } = useBoardDrag(tasks, allCardsQuery.data?.items, dividers, updateCard, columns);
+  } = useBoardDrag(
+    tasks,
+    allCardsQuery.data?.items,
+    dividers,
+    updateCard,
+    configureBoard,
+    columns,
+  );
 
   const closeSettings = () => {
     setSettingsOpen(false);
@@ -97,7 +110,8 @@ export const BoardPage = ({ archived }: { archived: boolean }) => {
     configureBoard.mutate(
       { type: "delete-column", id: editingColumn.id },
       {
-        onError: () => toast.error(boardText("Переместите задачи перед удалением колонки")),
+        onError: () =>
+          toast.error(boardText("Переместите задачи и разделители перед удалением колонки")),
         onSuccess: () => {
           closeSettings();
           toast.success(boardText("Колонка удалена"));
@@ -106,17 +120,25 @@ export const BoardPage = ({ archived }: { archived: boolean }) => {
     );
   };
 
-  const handleAddDivider = () => {
-    if (!editingColumn) return;
+  const handleOpenCreateDivider = () => {
+    const columnId = columns[0]?.id;
+    if (!columnId) return;
     const title = boardText(
       "Раздел {0}",
-      dividers.filter((divider) => divider.columnId === editingColumn.id).length + 1,
+      dividers.filter((divider) => divider.columnId === columnId).length + 1,
     );
+    setCreateDividerDraft({ title, columnId });
+  };
+
+  const handleCreateDivider = (input: { title: string; columnId: string }) => {
     configureBoard.mutate(
-      { type: "add-divider", title, columnId: editingColumn.id },
+      { type: "add-divider", title: input.title, columnId: input.columnId },
       {
         onError: () => toast.error(boardText("Не удалось добавить разделитель")),
-        onSuccess: () => toast.success(boardText("Раздел добавлен")),
+        onSuccess: () => {
+          setCreateDividerDraft(null);
+          toast.success(boardText("Раздел добавлен"));
+        },
       },
     );
   };
@@ -181,6 +203,8 @@ export const BoardPage = ({ archived }: { archived: boolean }) => {
   return (
     <TrackerShell
       onCreateTask={archived ? undefined : openCreate}
+      onCreateDivider={archived ? undefined : handleOpenCreateDivider}
+      createDividerDisabled={configureBoard.isPending}
       onAddColumn={
         archived
           ? undefined
@@ -239,7 +263,10 @@ export const BoardPage = ({ archived }: { archived: boolean }) => {
               {(source) => {
                 const taskId = getStringData(source.data.taskId);
                 const task = displayedTasks.find((item) => item.id === taskId);
-                return task && <TaskCard isOverlay task={task} />;
+                if (task) return <TaskCard isOverlay task={task} />;
+                const dividerId = getStringData(source.data.dividerId);
+                const divider = displayedDividers.find((item) => item.id === dividerId);
+                return divider ? <BoardDividerOverlay divider={divider} /> : null;
               }}
             </DragOverlay>
             <div className="flex min-h-full items-stretch justify-center">
@@ -259,7 +286,9 @@ export const BoardPage = ({ archived }: { archived: boolean }) => {
                       insertionBeforeId={
                         dropTarget?.status === column.id ? dropTarget.beforeId : undefined
                       }
-                      dragDisabled={!allCardsQuery.data || updateCard.isPending}
+                      dragDisabled={
+                        !allCardsQuery.data || updateCard.isPending || configureBoard.isPending
+                      }
                       onOpen={openView}
                       tasks={columnTasks}
                       dividers={displayedDividers}
@@ -291,7 +320,6 @@ export const BoardPage = ({ archived }: { archived: boolean }) => {
         onSave={handleSaveColumn}
         onMove={handleMoveColumn}
         onDelete={handleDeleteColumn}
-        onAddDivider={handleAddDivider}
         onEditDivider={handleEditDivider}
         onRemoveDivider={handleRemoveDivider}
         onExport={() => {
@@ -302,6 +330,17 @@ export const BoardPage = ({ archived }: { archived: boolean }) => {
           );
           void handleExportAll(editingColumn.id, boardText(editingColumn.label), columnTasks);
         }}
+      />
+      <CreateDividerDialog
+        open={createDividerDraft !== null}
+        columns={columns}
+        initialTitle={createDividerDraft?.title ?? ""}
+        initialColumnId={createDividerDraft?.columnId ?? ""}
+        busy={configureBoard.isPending}
+        onOpenChange={(open) => {
+          if (!open) setCreateDividerDraft(null);
+        }}
+        onCreate={handleCreateDivider}
       />
       {dialogs}
     </TrackerShell>

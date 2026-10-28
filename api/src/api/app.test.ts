@@ -352,6 +352,63 @@ it("creates, edits, orders and safely removes persisted columns and dividers", a
       ({ id }) => id === divider.id,
     )!.order,
   );
+
+  const destinationCard = (await (
+    await call("/board/cards", {
+      title: "Task in destination column",
+      description: null,
+      status: "queue",
+      priority: "medium",
+      tagIds: [],
+    })
+  ).json()) as Task;
+  const movedDividerResponse = await call(`/board/dividers/${divider.id}/move`, {
+    columnId: "queue",
+    beforeId: destinationCard.id,
+  });
+  expect(movedDividerResponse.status).toBe(200);
+  expect(await movedDividerResponse.json()).toMatchObject({
+    id: divider.id,
+    columnId: "queue",
+    title: "First release",
+  });
+  const movedDividerSnapshot = (await (await call("/board")).json()) as BoardSnapshot;
+  const movedDivider = movedDividerSnapshot.dividers!.find(({ id }) => id === divider.id)!;
+  const movedDestinationCard = movedDividerSnapshot.cards.find(
+    ({ id }) => id === destinationCard.id,
+  )!;
+  expect(movedDivider.order).toBeLessThan(movedDestinationCard.order);
+  expect(
+    (
+      await call(`/board/dividers/${divider.id}/move`, {
+        columnId: "missing-column",
+        beforeId: null,
+      })
+    ).status,
+  ).toBe(400);
+  expect(
+    (
+      await call(`/board/dividers/${divider.id}/move`, {
+        columnId: "queue",
+        beforeId: "missing-item",
+      })
+    ).status,
+  ).toBe(409);
+
+  const reorderedDividerResponse = await call(`/board/dividers/${divider.id}/move`, {
+    columnId: "queue",
+    beforeId: null,
+  });
+  expect(reorderedDividerResponse.status).toBe(200);
+  const reorderedDivider = (await reorderedDividerResponse.json()) as NonNullable<
+    BoardSnapshot["dividers"]
+  >[number];
+  const reorderedSnapshot = (await (await call("/board")).json()) as BoardSnapshot;
+  const reorderedDestinationCard = reorderedSnapshot.cards.find(
+    ({ id }) => id === destinationCard.id,
+  )!;
+  expect(reorderedDivider.order).toBeGreaterThan(reorderedDestinationCard.order);
+
   const renamed = await call(`/board/dividers/${divider.id}`, { title: "Ready for release" });
   expect(await renamed.json()).toMatchObject({ id: divider.id, title: "Ready for release" });
   expect(await (await call(`/board/dividers/${divider.id}/remove`, {})).json()).toEqual({

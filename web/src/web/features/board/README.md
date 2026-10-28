@@ -44,17 +44,21 @@ Task history is cached by task ID and revision and reread when that revision cha
 Comments in `comments/TaskComments.tsx` also use task ID/revision and retain their input across live
 updates. The task view shows comments with preview/download attachments; multipart writes commit
 text and files together and retain the draft after failure. Exports include comments and their files.
-`BoardStore` persists the ordered, editable column list and titled, per-column dividers in SQLite's
-`board_settings` JSON rows. It seeds the default array only when no saved setting exists, so changes
+`BoardStore` persists the ordered, editable column list and titled dividers with their current column
+and mixed-item order in PostgreSQL's `board_settings` JSON rows. It seeds the default array only when no saved setting exists, so changes
 survive API restarts without a versioned database migration. The API-owned defaults and validation
 schema live in `api/src/api/contracts/board-columns.ts`; Web mirrors the contract. Task statuses
 remain strings and are validated against the current saved columns. Column IDs stay stable; a column
-with assigned (including archived) tasks cannot be deleted until those tasks are moved. The Web
+with assigned (including archived) tasks or dividers cannot be deleted until its contents are moved
+or removed. The Web
 column settings dialog creates, renames, recolors, reorders and removes empty columns, and keeps the
-column export action there. Each divider stores its title, column and order alongside task order, so
-columns render one mixed sequence of task cards and section dividers. Legacy ID-only dividers are
-read with a default title and column. Dividers can be renamed or removed in place, and drag targets
-can insert cards before or after them; the insertion slot expands while a card is held there.
+column export action there. The board toolbar creates dividers independently of column settings and
+lets the user choose a starting column. Each divider stores its title, current column and order
+alongside task order, so columns render one mixed sequence of task cards and section dividers.
+Legacy ID-only dividers are read with a default title and column. Dividers can be renamed or removed
+from the settings for their current column, and can be dragged with their own handle within or
+between columns. A divider move atomically reorders both affected columns; task drop targets can also
+insert cards before or after dividers, with an expanded insertion slot while a card is held there.
 Column and tag colors accept custom hex values through the color picker; legacy named tag colors
 remain supported for existing records. Attachment cards use a compact horizontal preview and action
 layout.
@@ -63,12 +67,13 @@ that column. The English board label for the clarification/design column is “D
 Attachment bytes and parsed text are cached by file identity/content hash, without timers or broad invalidation.
 Opening the full preview reuses the thumbnail's bytes. Failed/rolled-back writes never notify.
 
-`dnd/use-board-drag.ts` replaces the source's unstable sortable preview with stationary card hit areas
-and an insertion line. dnd-kit provides pointer/keyboard sensors, overlay and scrolling; React
-owns list changes. `dnd/task-board-drop.ts` resolves the pointer against visible column bounds and
-card midpoints, including gaps, empty columns and column headers. Release coordinates take
+`dnd/use-board-drag.ts` replaces the source's unstable sortable preview with stationary mixed-item
+hit areas and an insertion line. dnd-kit provides pointer/keyboard sensors, overlay and scrolling;
+React owns list changes. `dnd/task-board-drop.ts` resolves the pointer against visible column bounds
+and item midpoints, including gaps, empty columns and column headers. Release coordinates take
 precedence over frame-batched movement. Outside drops and cancellation never save. Arrow keys
-step between insertion slots and columns; Space/Enter commits and Escape cancels.
+step between insertion slots and columns; Space/Enter commits and Escape cancels. Tasks use their
+revision-aware card update, while divider moves use the board-layout transaction.
 
 The visible and full task lists stay frozen during a gesture. Search-hidden siblings retain their
 relative positions. A successful drop sends the indicated sibling ID and original source revision,

@@ -55,43 +55,54 @@ export const getOrderedColumnItems = (
       })),
   ].sort((first, second) => first.order - second.order || first.id.localeCompare(second.id));
 
-export const moveBoardTask = (
+export const moveBoardItem = (
   tasks: readonly Task[],
   dividers: readonly BoardDivider[],
-  taskId: string,
+  itemId: string,
   target: BoardDropTarget,
   columns: readonly BoardColumn[] = boardColumns,
 ): { readonly tasks: readonly Task[]; readonly dividers: readonly BoardDivider[] } => {
-  const source = tasks.find((task) => task.id === taskId);
   const unchanged = { tasks, dividers };
-  if (!source || source.status === "archived") return unchanged;
-  const original = getOrderedColumnItems(tasks, dividers, source.status);
-  const nextId = original[original.findIndex((item) => item.id === taskId) + 1]?.id ?? null;
-  if (source.status === target.status && nextId === target.beforeId) return unchanged;
+  const sourceTask = tasks.find((task) => task.id === itemId);
+  const sourceDivider = dividers.find((divider) => divider.id === itemId);
+  const sourceStatus = sourceTask?.status ?? sourceDivider?.columnId;
+  if (!sourceStatus || sourceTask?.archivedAt) return unchanged;
+  const original = getOrderedColumnItems(tasks, dividers, sourceStatus);
+  const source = original.find((item) => item.id === itemId);
+  if (!source) return unchanged;
+  const nextId = original[original.findIndex((item) => item.id === itemId) + 1]?.id ?? null;
+  if (sourceStatus === target.status && nextId === target.beforeId) return unchanged;
   const destination = getOrderedColumnItems(tasks, dividers, target.status).filter(
-    (item) => item.id !== taskId,
+    (item) => item.id !== itemId,
   );
   const index =
     target.beforeId === null
       ? destination.length
       : destination.findIndex((item) => item.id === target.beforeId);
   if (index < 0) return unchanged;
-  destination.splice(index, 0, {
-    kind: "task",
-    id: source.id,
-    order: 0,
-    task: { ...source, status: target.status },
-  });
+  const movedItem: BoardColumnItem =
+    source.kind === "task"
+      ? {
+          ...source,
+          order: 0,
+          task: { ...source.task, status: target.status },
+        }
+      : {
+          ...source,
+          order: 0,
+          divider: { ...source.divider, columnId: target.status },
+        };
+  destination.splice(index, 0, movedItem);
   const nextTasks = new Map(tasks.map((task) => [task.id, task]));
   const nextDividers = new Map(dividers.map((divider) => [divider.id, divider]));
   for (const { id: status } of columns) {
     const items =
       status === target.status
         ? destination
-        : getOrderedColumnItems(tasks, dividers, status).filter((item) => item.id !== taskId);
+        : getOrderedColumnItems(tasks, dividers, status).filter((item) => item.id !== itemId);
     items.forEach((item, order) => {
       if (item.kind === "task") nextTasks.set(item.id, { ...item.task, status, order });
-      else nextDividers.set(item.id, { ...item.divider, order });
+      else nextDividers.set(item.id, { ...item.divider, columnId: status, order });
     });
   }
   return {
@@ -100,22 +111,33 @@ export const moveBoardTask = (
   };
 };
 
+export const moveBoardTask = (
+  tasks: readonly Task[],
+  dividers: readonly BoardDivider[],
+  taskId: string,
+  target: BoardDropTarget,
+  columns: readonly BoardColumn[] = boardColumns,
+) =>
+  tasks.some((task) => task.id === taskId)
+    ? moveBoardItem(tasks, dividers, taskId, target, columns)
+    : { tasks, dividers };
+
 /** Keep hidden cards in place and send a stable sibling ID, never a polling-dependent index. */
 export const getFullColumnDropTarget = (
   visibleTasks: readonly Task[],
   allTasks: readonly Task[],
-  taskId: string,
+  itemId: string,
   target: BoardDropTarget,
   dividers: readonly BoardDivider[] = [],
 ): BoardDropTarget => {
   if (target.beforeId !== null) return target;
   const visible = getOrderedColumnItems(visibleTasks, dividers, target.status).filter(
-    (item) => item.id !== taskId,
+    (item) => item.id !== itemId,
   );
   const last = visible.at(-1);
   if (!last) return target;
   const full = getOrderedColumnItems(allTasks, dividers, target.status).filter(
-    (item) => item.id !== taskId,
+    (item) => item.id !== itemId,
   );
   const index = full.findIndex((item) => item.id === last.id);
   if (index < 0) return target;
@@ -125,13 +147,13 @@ export const getFullColumnDropTarget = (
 export const getKeyboardDropTarget = (
   tasks: readonly Task[],
   dividers: readonly BoardDivider[],
-  taskId: string,
+  itemId: string,
   current: BoardDropTarget,
   direction: { readonly x: number; readonly y: number },
   columns: readonly BoardColumn[] = boardColumns,
 ): BoardDropTarget => {
   const column = getOrderedColumnItems(tasks, dividers, current.status).filter(
-    (item) => item.id !== taskId,
+    (item) => item.id !== itemId,
   );
   let index =
     current.beforeId === null
@@ -142,7 +164,7 @@ export const getKeyboardDropTarget = (
     columns[Math.max(0, Math.min(columns.length - 1, columnIndex + Math.sign(direction.x)))]!
       .id;
   const destination = getOrderedColumnItems(tasks, dividers, status).filter(
-    (item) => item.id !== taskId,
+    (item) => item.id !== itemId,
   );
   index = Math.max(0, Math.min(destination.length, index + Math.sign(direction.y)));
   return { status, beforeId: destination[index]?.id ?? null };

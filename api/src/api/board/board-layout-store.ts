@@ -6,6 +6,7 @@ import {
   boardColumns as defaultBoardColumns,
   boardColumnsSchema,
   boardDividerSchema,
+  type BoardDividerMoveInput,
 } from "../contracts/board-columns.js";
 import { HttpError } from "../http-error.js";
 import { PostgresDatabase } from "../database/database.js";
@@ -110,8 +111,9 @@ export class BoardLayoutStore {
         continue;
       }
       const index = dividers.findIndex((divider) => divider.id === item.id);
-      if (index >= 0 && dividers[index]!.order !== order) {
-        dividers[index] = { ...dividers[index]!, order };
+      const current = dividers[index];
+      if (current && (current.order !== order || current.columnId !== item.divider.columnId)) {
+        dividers[index] = { ...current, columnId: item.divider.columnId, order };
         dividerChanged = true;
       }
     }
@@ -212,6 +214,54 @@ export class BoardLayoutStore {
       dividers[index] = updated;
       await repository.saveSetting("dividers", dividers);
       return updated;
+    });
+
+  moveDivider = (id: string, input: BoardDividerMoveInput) =>
+    this.db.transaction(async (executor) => {
+      const repository = new BoardRepository(executor);
+      if (
+        !(await this.columns(repository)).some(
+          ({ id: columnId }) => columnId === input.columnId,
+        )
+      )
+        throw new HttpError(400, "Choose a current board column.");
+
+      const divider = (await this.dividers(repository)).find((item) => item.id === id);
+      if (!divider) throw new HttpError(404, "Divider not found.");
+
+      const sourceItems = await this.columnItems(divider.columnId, undefined, repository);
+      const sourceIndex = sourceItems.findIndex((item) => item.id === id);
+      if (sourceIndex < 0)
+        throw new HttpError(409, "The board changed. Refresh and try again.");
+      const nextSourceId = sourceItems[sourceIndex + 1]?.id ?? null;
+      if (divider.columnId === input.columnId && nextSourceId === input.beforeId)
+        return divider;
+
+      const sourceRemaining = sourceItems.filter((item) => item.id !== id);
+      const destinationItems =
+        divider.columnId === input.columnId
+          ? sourceRemaining
+          : (await this.columnItems(input.columnId, undefined, repository)).filter(
+              (item) => item.id !== id,
+            );
+      const position =
+        input.beforeId === null
+          ? destinationItems.length
+          : destinationItems.findIndex((item) => item.id === input.beforeId);
+      if (position < 0) throw new HttpError(409, "The board changed. Refresh and try again.");
+
+      const movedDivider = { ...divider, columnId: input.columnId };
+      destinationItems.splice(position, 0, {
+        kind: "divider",
+        id,
+        divider: movedDivider,
+      });
+
+      if (divider.columnId !== input.columnId)
+        await this.writeColumnOrder(sourceRemaining, undefined, repository);
+      await this.writeColumnOrder(destinationItems, undefined, repository);
+
+      return (await this.dividers(repository)).find((item) => item.id === id)!;
     });
 
   deleteDivider = (id: string) =>

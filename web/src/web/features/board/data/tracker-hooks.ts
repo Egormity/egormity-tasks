@@ -13,6 +13,7 @@ import {
   deleteTrackerDivider,
   deleteTrackerTag,
   getTrackerEvents,
+  moveTrackerDivider,
   selectTrackerCards,
   selectTrackerTags,
   restoreTrackerCard,
@@ -61,6 +62,11 @@ export type BoardConfigurationAction =
   | { readonly type: "delete-column"; readonly id: string }
   | { readonly type: "add-divider"; readonly title: string; readonly columnId: string }
   | { readonly type: "update-divider"; readonly id: string; readonly title: string }
+  | {
+      readonly type: "move-divider";
+      readonly id: string;
+      readonly input: { readonly columnId: string; readonly beforeId: string | null };
+    }
   | { readonly type: "delete-divider"; readonly id: string };
 
 export const useBoardConfiguration = () => {
@@ -75,6 +81,7 @@ export const useBoardConfiguration = () => {
         return createTrackerDivider({ title: action.title, columnId: action.columnId });
       if (action.type === "update-divider")
         return updateTrackerDivider(action.id, action.title);
+      if (action.type === "move-divider") return moveTrackerDivider(action.id, action.input);
       return deleteTrackerDivider(action.id);
     },
     onSuccess: () => invalidateTracker(queryClient),

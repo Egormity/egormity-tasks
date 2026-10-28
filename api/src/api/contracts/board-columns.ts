@@ -44,8 +44,16 @@ export const boardDividerInputSchema = z
   })
   .strict();
 
+export const boardDividerMoveInputSchema = z
+  .object({
+    columnId: z.string().min(1).max(160),
+    beforeId: z.string().min(1).max(160).nullable(),
+  })
+  .strict();
+
 export type BoardColumn = z.infer<typeof boardColumnSchema>;
 export type TaskStatus = string;
 export type BoardDivider = z.infer<typeof boardDividerSchema>;
+export type BoardDividerMoveInput = z.infer<typeof boardDividerMoveInputSchema>;
 
 export const taskStatuses = boardColumns.map(({ id }) => id) as [TaskStatus, ...TaskStatus[]];

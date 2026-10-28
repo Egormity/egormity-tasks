@@ -22,7 +22,7 @@ export const BoardDividerItem = ({
 
   return (
     <div className="flex min-h-9 items-center gap-1.5 px-1">
-      <span aria-hidden="true" className="bg-board-divider h-px min-w-3 flex-1" />
+      <span aria-hidden="true" className="bg-board-divider h-0.5 min-w-3 flex-1" />
       <input
         aria-label={boardText("Название раздела")}
         className="border-board-input-border bg-board-canvas text-board-secondary focus:border-board-accent w-32 rounded border px-2 py-1 text-center text-[11px] outline-none"
@@ -50,7 +50,7 @@ export const BoardDividerItem = ({
       >
         <Trash2 aria-hidden="true" className="size-3.5" />
       </button>
-      <span aria-hidden="true" className="bg-board-divider h-px min-w-3 flex-1" />
+      <span aria-hidden="true" className="bg-board-divider h-0.5 min-w-3 flex-1" />
     </div>
   );
 };
