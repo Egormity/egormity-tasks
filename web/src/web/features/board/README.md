@@ -19,8 +19,9 @@ copy; `board-theme.css` gives the original colors named tokens and dark equivale
 controls belong to the workspace navigation. Tasks and Archive are separate direct pages (`/tasks`
 and `/archive`), with Users available to admins.
 Task view omits the attachment section when the task has no attachments.
-Opening a card shows its details, attachments, tags and a combined comments/history activity feed in
-the task dialog.
+Opening a card shows its title with read-only tag chips beside it, then its details, attachments and
+a combined comments/history activity feed in the task dialog. `tags/task-tag-chips.tsx` renders the
+inline chips; tag editing stays in the edit view.
 `editor/use-task-editor.tsx` owns view/edit, archive and export actions. The drag handle remains
 independent on the right.
 On phones the toolbar keeps task search available at full width. Tag management uses compact rows and
@@ -45,9 +46,9 @@ Comments in `activity/TaskActivity.tsx` are cached by task ID/revision and retai
 live updates. The view exposes Comments and History toggles (Comments on by default) that share one
 activity feed; with both enabled, comments and events interleave chronologically, while History
 alone shows only events. Comment-added events are hidden while comments are visible (the comment is
-already the entry) and reappear in History alone. Comments keep preview/download attachments;
-multipart writes commit text and files together and retain the draft after failure. Exports include
-comments and their files.
+already the entry) and reappear in History alone. The composer sits above the feed, so it precedes
+history entries. Comments keep preview/download attachments; multipart writes commit text and files
+together and retain the draft after failure. Exports include comments and their files.
 The edit view keeps the collapsible history section in `editor/task-editor-history.tsx`, whose
 `HistoryEntry` card is reused by the activity feed.
 Task descriptions and comment bodies render GitHub-flavored Markdown through

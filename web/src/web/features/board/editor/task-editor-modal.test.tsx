@@ -142,3 +142,36 @@ it("renders the task description as markdown in view mode", () => {
   expect(screen.getByText("code").tagName).toBe("CODE");
   client.clear();
 });
+
+it("shows read-only tags beside the task title in view mode", () => {
+  document.documentElement.lang = "en";
+  const client = new QueryClient();
+  const taggedTask: Task = {
+    ...task,
+    tags: [{ id: "tag", name: "Platform", tone: "blue" }],
+  };
+  render(
+    <QueryClientProvider client={client}>
+      <TaskEditorModal
+        events={[]}
+        mode="view"
+        onOpenChange={vi.fn()}
+        onCreateTag={vi.fn()}
+        onDeleteTag={vi.fn()}
+        onRequestEdit={vi.fn()}
+        onSave={vi.fn()}
+        onUpdateTag={vi.fn()}
+        open
+        tags={[{ id: "tag", name: "Platform", tone: "blue", usageCount: 0 }]}
+        task={taggedTask}
+      />
+    </QueryClientProvider>,
+  );
+
+  const chips = screen.getByRole("list", { name: "Tags" });
+  expect(chips.textContent).toContain("Platform");
+  const title = screen.getByRole("heading", { name: "Original task" });
+  expect(title.compareDocumentPosition(chips) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  expect(screen.queryByRole("heading", { name: "Tags" })).toBeNull();
+  client.clear();
+});

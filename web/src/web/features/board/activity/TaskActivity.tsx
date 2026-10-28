@@ -197,6 +197,7 @@ export const TaskActivity = ({ cardId, columns, events }: TaskActivityProps) => 
             {boardText("Не удалось загрузить комментарии. Повторить")}
           </button>
         )}
+        {showComments && <CommentComposer onSubmit={submit} />}
         {commentsLoading && <CommentsSkeleton />}
         {isEmpty &&
           (!showComments && !showHistory ? (
@@ -231,7 +232,6 @@ export const TaskActivity = ({ cardId, columns, events }: TaskActivityProps) => 
             ))}
           </ol>
         )}
-        {showComments && <CommentComposer onSubmit={submit} />}
       </div>
     </section>
   );

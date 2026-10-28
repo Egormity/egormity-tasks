@@ -129,6 +129,10 @@ it("merges history with comments into one feed and can show history alone", asyn
   await screen.findByText("Task created");
   expect(screen.queryByText("Comment added")).toBeNull();
   const feed = screen.getByRole("list", { name: "Activity feed" });
+  const composer = screen.getByRole("textbox", { name: "Comment" });
+  expect(
+    composer.compareDocumentPosition(feed) & Node.DOCUMENT_POSITION_FOLLOWING,
+  ).toBeTruthy();
   const feedText = feed.textContent ?? "";
   expect(feedText.indexOf("Task created")).toBeGreaterThan(-1);
   expect(feedText.indexOf("Task created")).toBeLessThan(feedText.indexOf("Comment text"));

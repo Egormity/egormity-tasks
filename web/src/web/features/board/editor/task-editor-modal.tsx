@@ -32,6 +32,7 @@ import {
 } from "@/features/board/attachments/task-editor-attachments";
 import { TaskEditorHistory } from "./task-editor-history";
 import { TaskEditorTags } from "@/features/board/tags/task-editor-tags";
+import { TaskTagChips } from "@/features/board/tags/task-tag-chips";
 import { TaskTagManagerModal } from "@/features/board/tags/task-tag-manager-modal";
 import type { TrackerTag, TrackerTagUpdate } from "@/features/board/data/tracker-api";
 
@@ -113,6 +114,7 @@ export const TaskEditorModal = ({
       : (columns.find(({ id }) => id === "backlog")?.id ?? columns[0]?.id ?? "backlog"),
   );
   const appliedTagIds = selectedTagIds.filter((id) => tags.some((tag) => tag.id === id));
+  const appliedTags = tags.filter((tag) => appliedTagIds.includes(tag.id));
   const handleAddFiles = useCallback((files: readonly File[]) => {
     const nextAttachments = createTaskAttachments(files);
     setAttachments((current) => [...current, ...nextAttachments]);
@@ -223,20 +225,32 @@ export const TaskEditorModal = ({
             </ModalHeader>
 
             <div className="min-h-0 w-full min-w-0 flex-1 overflow-y-auto overscroll-contain">
-              <div className="grid min-h-full w-full min-w-0 gap-4 px-4 py-3 lg:grid-cols-[minmax(0,1.3fr)_minmax(16rem,0.7fr)] lg:gap-x-0">
+              <div
+                className={`grid min-h-full w-full min-w-0 gap-4 px-4 py-3 ${
+                  isView ? "" : "lg:grid-cols-[minmax(0,1.3fr)_minmax(16rem,0.7fr)] lg:gap-x-0"
+                }`}
+              >
                 {isView ? (
                   <>
                     <section
                       aria-label={boardText("Основные детали")}
-                      className="task-editor-modal-divider lg:border-board-divider min-w-0 space-y-4 lg:border-r lg:pr-4"
+                      className="min-w-0 space-y-4"
                     >
                       <div>
                         <p className="text-board-muted text-xs font-medium">
                           {boardText("Название")}
                         </p>
-                        <h2 className="text-board-heading mt-1 text-lg font-semibold tracking-tight">
-                          {task?.title}
-                        </h2>
+                        <div className="mt-1 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+                          <h2 className="text-board-heading min-w-0 text-lg font-semibold tracking-tight">
+                            {task?.title}
+                          </h2>
+                          {task && (
+                            <TaskTagChips
+                              className="min-w-0 shrink-0 sm:max-w-[55%]"
+                              tags={appliedTags}
+                            />
+                          )}
+                        </div>
                       </div>
                       <div>
                         <h2 className="text-board-text text-xs font-medium">
@@ -275,15 +289,6 @@ export const TaskEditorModal = ({
                         />
                       )}
                     </section>
-
-                    <aside className="min-w-0 space-y-4 lg:pl-4">
-                      <TaskEditorTags
-                        onConfigure={() => setTagManagerOpen(true)}
-                        readOnly
-                        selectedTagIds={appliedTagIds}
-                        tags={tags}
-                      />
-                    </aside>
                   </>
                 ) : (
                   <>

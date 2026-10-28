@@ -9,7 +9,6 @@ import { customTaskTagToneStyle, taskTagToneStyles } from "./task-tag-styles";
 type TaskEditorTagsProps = {
   readonly onConfigure?: (() => void) | undefined;
   readonly onToggleTag?: ((id: string) => void) | undefined;
-  readonly readOnly?: boolean | undefined;
   readonly selectedTagIds: readonly string[];
   readonly tags: readonly TrackerTag[];
 };
@@ -17,12 +16,9 @@ type TaskEditorTagsProps = {
 export const TaskEditorTags = ({
   onConfigure,
   onToggleTag,
-  readOnly = false,
   selectedTagIds,
   tags,
 }: TaskEditorTagsProps) => {
-  const selectedTags = tags.filter((tag) => selectedTagIds.includes(tag.id));
-
   return (
     <section aria-labelledby="task-tags-heading" className="space-y-2">
       <div className="flex items-center justify-between gap-3">
@@ -32,7 +28,7 @@ export const TaskEditorTags = ({
             {boardText("Теги")}
           </h2>
         </div>
-        {!readOnly && onConfigure && (
+        {onConfigure && (
           <button
             aria-label={boardText("Настроить справочник тегов")}
             className="text-board-icon hover:bg-board-selected hover:text-board-accent-hover focus-visible:ring-board-accent inline-flex min-h-7 items-center gap-1.5 rounded-lg px-2 text-xs font-semibold transition focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
@@ -46,25 +42,7 @@ export const TaskEditorTags = ({
       </div>
 
       <div className="border-board-modal-border bg-board-canvas rounded-md border p-2.5">
-        {readOnly ? (
-          selectedTags.length > 0 ? (
-            <div className="flex flex-wrap gap-2">
-              {selectedTags.map((tag) => (
-                <span
-                  className={`rounded-sm px-1.5 py-0.5 text-[14px] font-medium ${taskTagToneStyles[tag.tone] ?? "bg-board-selected text-board-secondary"}`}
-                  style={customTaskTagToneStyle(tag.tone)}
-                  key={tag.id}
-                >
-                  {tag.name}
-                </span>
-              ))}
-            </div>
-          ) : (
-            <p className="text-board-subtle text-xs">
-              {boardText("К этой карточке пока не применены теги.")}
-            </p>
-          )
-        ) : tags.length > 0 ? (
+        {tags.length > 0 ? (
           <div className="space-y-2">
             <p className="text-board-summary mb-2 text-[14px]">
               {boardText("Выберите один или несколько тегов для этой карточки.")}
