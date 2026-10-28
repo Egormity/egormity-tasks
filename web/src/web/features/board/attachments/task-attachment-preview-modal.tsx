@@ -58,7 +58,7 @@ export const TaskAttachmentPreviewModal = ({
         style={{
           width: "calc(100vw - 2rem)",
           maxWidth: "90rem",
-          maxHeight: "calc(100dvh - 2rem)",
+          height: "calc(100dvh - 2rem)",
           overflow: "hidden",
         }}
         onClick={(event) => event.stopPropagation()}
@@ -79,29 +79,31 @@ export const TaskAttachmentPreviewModal = ({
             <X className="size-4" />
           </ModalClose>
         </ModalHeader>
-        <div className="bg-board-canvas min-h-0 overflow-auto p-3">
+        <div className="bg-board-canvas flex min-h-0 flex-1 flex-col overflow-hidden p-3">
           {error || text.isError ? (
-            <p role="alert" className="p-8 text-center">
+            <p role="alert" className="grid flex-1 place-items-center p-8 text-center">
               {boardText(
                 "Не удалось загрузить вложение. Закройте просмотр и попробуйте снова.",
               )}
             </p>
           ) : loading ? (
-            <p role="status" className="p-8 text-center">
+            <p role="status" className="grid flex-1 place-items-center p-8 text-center">
               {boardText("Загрузка вложения…")}
             </p>
           ) : kind === "image" && url ? (
-            <img
-              src={url}
-              alt={attachment?.name ?? boardText("Вложение")}
-              className="block h-[calc(100dvh-10rem)] w-full object-contain"
-            />
+            <div className="flex min-h-0 flex-1 items-center justify-center">
+              <img
+                src={url}
+                alt={attachment?.name ?? boardText("Вложение")}
+                className="block max-h-full max-w-full rounded-lg object-contain"
+              />
+            </div>
           ) : kind === "text" && text.data !== undefined ? (
-            <pre className="bg-board-heading text-board-attachment-border max-h-[calc(100dvh-10rem)] overflow-auto rounded-lg p-4 text-sm break-words whitespace-pre-wrap">
+            <pre className="bg-board-heading text-board-attachment-border min-h-0 flex-1 overflow-auto rounded-lg p-4 text-sm break-words whitespace-pre-wrap">
               {text.data}
             </pre>
           ) : (
-            <p className="p-8 text-center">
+            <p className="grid flex-1 place-items-center p-8 text-center">
               {blob
                 ? boardText("Загрузка предпросмотра…")
                 : boardText("Предпросмотр недоступен")}
