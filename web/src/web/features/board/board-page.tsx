@@ -202,25 +202,29 @@ export const BoardPage = ({ archived }: { archived: boolean }) => {
           {boardText("Не удалось загрузить задачи.")}
         </p>
       )}
-      {archived && !cardsQuery.isLoading && !cardsQuery.isError && (
-        <div className="grid gap-2 p-2 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
-          {tasks.map((task) => (
-            <TaskCard
-              key={task.id}
-              task={task}
-              readOnly
-              onOpen={openView}
-              onRestore={handleArchive}
-              isRestoring={isRestoring}
-            />
-          ))}
-          {!tasks.length && (
-            <p className="text-board-subtle py-6 text-xs">
+      {archived &&
+        !cardsQuery.isLoading &&
+        !cardsQuery.isError &&
+        (tasks.length > 0 ? (
+          <div className="grid gap-2 p-2 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
+            {tasks.map((task) => (
+              <TaskCard
+                key={task.id}
+                task={task}
+                readOnly
+                onOpen={openView}
+                onRestore={handleArchive}
+                isRestoring={isRestoring}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="grid min-h-full place-items-center p-6">
+            <p className="text-board-subtle text-center text-xs">
               {boardText("Нет подходящих задач")}
             </p>
-          )}
-        </div>
-      )}
+          </div>
+        ))}
       {!archived && !cardsQuery.isLoading && !cardsQuery.isError && (
         <div className="mx-auto w-max min-w-full">
           <DragDropProvider
@@ -243,7 +247,7 @@ export const BoardPage = ({ archived }: { archived: boolean }) => {
                 const columnTasks = getOrderedColumnTasks(displayedTasks, column.id);
                 return (
                   <div
-                    className="flex w-[320px] min-w-[320px] flex-none flex-col"
+                    className="border-board-column-border flex w-[320px] min-w-[320px] flex-none flex-col first:border-l"
                     key={column.id}
                   >
                     <BoardColumn

@@ -34,7 +34,7 @@ export const TaskAttachmentCard = ({
   const [failedUrl, setFailedUrl] = useState<string>();
   return (
     <li
-      className="border-board-attachment-border bg-board-surface flex w-60 max-w-full shrink-0 snap-start gap-2 rounded-lg border p-2"
+      className="border-board-attachment-border bg-board-surface flex w-56 max-w-full shrink-0 snap-start items-center gap-2 rounded-md border p-1.5"
       onClick={(event) => event.stopPropagation()}
     >
       <button
@@ -42,7 +42,7 @@ export const TaskAttachmentCard = ({
         aria-label={boardText("Открыть вложение {0}", attachment.name)}
         disabled={!kind}
         onClick={onPreview}
-        className="bg-board-preview-surface text-board-preview-icon focus-visible:ring-board-accent grid h-14 w-16 shrink-0 cursor-pointer place-items-center overflow-hidden rounded-md focus-visible:ring-2 focus-visible:outline-none disabled:cursor-default"
+        className="bg-board-preview-surface text-board-preview-icon focus-visible:ring-board-accent grid size-10 shrink-0 cursor-pointer place-items-center overflow-hidden rounded-sm focus-visible:ring-2 focus-visible:outline-none disabled:cursor-default"
       >
         {url && failedUrl !== url ? (
           <img
@@ -62,46 +62,49 @@ export const TaskAttachmentCard = ({
           <FileText aria-hidden="true" className="size-5" />
         )}
       </button>
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
         <p
           title={attachment.name}
-          className="text-board-secondary line-clamp-2 text-xs leading-4 font-medium break-all"
+          className="text-board-secondary truncate text-xs leading-4 font-medium"
         >
           {attachment.name}
         </p>
-        <p className="text-board-subtle mt-0.5 text-[10px]">
-          {formatFileSize(attachment.size)}
-        </p>
-        {!attachment.objectId && !file && (
-          <p className="text-board-rose mt-0.5 text-[10px]">{boardText("Файл недоступен")}</p>
-        )}
-        <div className="mt-auto flex gap-0.5 pt-1">
-          <button
-            type="button"
-            aria-label={boardText("Скачать вложение {0}", attachment.name)}
-            title={boardText("Скачать")}
-            disabled={downloadDisabled}
-            aria-busy={downloading}
-            onClick={onDownload}
-            className="text-board-icon hover:bg-board-button-selected focus-visible:ring-board-accent grid size-7 cursor-pointer place-items-center rounded-md focus-visible:ring-2 disabled:opacity-50"
-          >
-            {downloading ? (
-              <LoaderCircle aria-hidden="true" className="size-3.5 animate-spin" />
+        <div className="flex min-w-0 items-center justify-between gap-1">
+          <p className="text-board-subtle min-w-0 truncate text-[10px]">
+            {!attachment.objectId && !file ? (
+              <span className="text-board-rose">{boardText("Файл недоступен")}</span>
             ) : (
-              <Download aria-hidden="true" className="size-3.5" />
+              formatFileSize(attachment.size)
             )}
-          </button>
-          {onRemove && (
+          </p>
+          <div className="flex shrink-0 items-center gap-0.5">
             <button
               type="button"
-              aria-label={boardText("Удалить вложение {0}", attachment.name)}
-              title={boardText("Удалить")}
-              onClick={onRemove}
-              className="text-board-rose hover:bg-board-rose-surface focus-visible:ring-board-accent grid size-7 cursor-pointer place-items-center rounded-md focus-visible:ring-2"
+              aria-label={boardText("Скачать вложение {0}", attachment.name)}
+              title={boardText("Скачать")}
+              disabled={downloadDisabled}
+              aria-busy={downloading}
+              onClick={onDownload}
+              className="text-board-icon hover:bg-board-button-selected focus-visible:ring-board-accent grid size-6 cursor-pointer place-items-center rounded-sm focus-visible:ring-2 disabled:opacity-50"
             >
-              <Trash2 aria-hidden="true" className="size-3.5" />
+              {downloading ? (
+                <LoaderCircle aria-hidden="true" className="size-3 animate-spin" />
+              ) : (
+                <Download aria-hidden="true" className="size-3" />
+              )}
             </button>
-          )}
+            {onRemove && (
+              <button
+                type="button"
+                aria-label={boardText("Удалить вложение {0}", attachment.name)}
+                title={boardText("Удалить")}
+                onClick={onRemove}
+                className="text-board-rose hover:bg-board-rose-surface focus-visible:ring-board-accent grid size-6 cursor-pointer place-items-center rounded-sm focus-visible:ring-2"
+              >
+                <Trash2 aria-hidden="true" className="size-3" />
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </li>
