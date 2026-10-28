@@ -70,7 +70,7 @@ export class UserAuthentication {
       maxAge: token ? policy.cookieMaxAgeMilliseconds : 0,
     });
 
-  private verifyToken = (token: string) => {
+  private verifyToken = async (token: string) => {
     const [payload, signature, extra] = token.split(".");
     if (!payload || !signature || extra !== undefined || this.revoked.has(token)) return null;
     const expected = createHmac("sha256", this.config.sessionSecret)
@@ -88,7 +88,7 @@ export class UserAuthentication {
         JSON.parse(Buffer.from(payload, "base64url").toString()),
       );
       if (decoded.expiresAt <= Date.now()) return null;
-      const user = this.users.findById(decoded.id);
+      const user = await this.users.findById(decoded.id);
       if (!user || user.sessionVersion !== decoded.sessionVersion) return null;
       return publicUser(user);
     } catch {
@@ -96,25 +96,25 @@ export class UserAuthentication {
     }
   };
 
-  verify = (request: Request) => {
+  verify = async (request: Request) => {
     const token = readToken(request);
-    const user = token ? this.verifyToken(token) : null;
+    const user = token ? await this.verifyToken(token) : null;
     if (!user) throw new HttpError(401, "Your session has expired. Sign in again.");
     return user;
   };
 
-  requireAuthenticated = (request: Request, response: Response, next: NextFunction) => {
+  requireAuthenticated = async (request: Request, response: Response, next: NextFunction) => {
     try {
-      response.locals.user = this.verify(request);
+      response.locals.user = await this.verify(request);
       next();
     } catch (error) {
       next(error);
     }
   };
 
-  requireAdmin = (request: Request, response: Response, next: NextFunction) => {
+  requireAdmin = async (request: Request, response: Response, next: NextFunction) => {
     try {
-      const user = this.verify(request);
+      const user = await this.verify(request);
       if (user.role !== "admin") throw new HttpError(403, "Admin access is required.");
       response.locals.user = user;
       next();
@@ -123,7 +123,7 @@ export class UserAuthentication {
     }
   };
 
-  login = (request: Request, response: Response) => {
+  login = async (request: Request, response: Response) => {
     const now = Date.now();
     for (const [key, value] of this.attempts) if (value.reset <= now) this.attempts.delete(key);
     for (const [key, expiry] of this.revoked) if (expiry <= now) this.revoked.delete(key);
@@ -138,7 +138,7 @@ export class UserAuthentication {
     this.attempts.set(key, attempt);
     const input = loginRequestSchema.safeParse(request.body);
     if (!input.success) throw new HttpError(400, "Enter a username and password.");
-    const user = this.users.findByUsername(input.data.username);
+    const user = await this.users.findByUsername(input.data.username);
     const passwordMatches = verifyPassword(
       input.data.password,
       user?.passwordHash ?? this.config.adminPasswordHash,

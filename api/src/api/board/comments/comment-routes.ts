@@ -8,12 +8,14 @@ import type { BoardEvents } from "../board-events.js";
 
 export const commentRoutes = (board: BoardStore, events: BoardEvents) => {
   const router = Router();
-  router.get("/cards/:id/comments", (req, res) => res.json(board.comments.list(req.params.id)));
+  router.get("/cards/:id/comments", async (req, res) =>
+    res.json(await board.comments.list(req.params.id)),
+  );
   router.post(
     "/cards/:id/comments",
     raw({ type: "multipart/form-data", limit: commentLimits.maxBytes + 64 * 1024 }),
     async (req, res) => {
-      board.get(req.params.id);
+      await board.get(req.params.id);
       if (!Buffer.isBuffer(req.body)) throw new HttpError(400, "Invalid comment upload.");
       let form: FormData;
       try {
@@ -62,7 +64,7 @@ export const commentRoutes = (board: BoardStore, events: BoardEvents) => {
         }),
       );
       const user = res.locals.user as { id: string; username: string };
-      const comment = board.comments.add(
+      const comment = await board.comments.add(
         { ...input.data, cardId: req.params.id, author: { id: user.id, name: user.username } },
         uploads,
       );

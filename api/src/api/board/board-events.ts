@@ -1,7 +1,7 @@
 import type { RequestHandler, Response } from "express";
 import { randomUUID } from "node:crypto";
 
-/** Invalidation only; SQLite remains the source of board data. One API process owns it. */
+/** Invalidation only; PostgreSQL remains the source of board data. One API process owns this stream. */
 export class BoardEvents {
   version: string = randomUUID();
   private readonly clients = new Set<Response>();

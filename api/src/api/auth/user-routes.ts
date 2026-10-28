@@ -17,18 +17,22 @@ export const userRoutes = (users: UserStore) => {
     return result.data;
   };
 
-  router.get("/", (_request, response) => response.json(users.list()));
-  router.post("/", (request, response) =>
-    response.status(201).json(users.create(parse(createUserRequestSchema, request.body))),
+  router.get("/", async (_request, response) => response.json(await users.list()));
+  router.post("/", async (request, response) =>
+    response.status(201).json(await users.create(parse(createUserRequestSchema, request.body))),
   );
-  router.post("/:id/remove", (request, response) => {
+  router.post("/:id/remove", async (request, response) => {
     const actor = response.locals.user as User;
-    response.json(users.remove(request.params.id, actor.id));
+    response.json(await users.remove(request.params.id, actor.id));
   });
-  router.post("/:id", (request, response) => {
+  router.post("/:id", async (request, response) => {
     const actor = response.locals.user as User;
     response.json(
-      users.update(request.params.id, actor.id, parse(updateUserRequestSchema, request.body)),
+      await users.update(
+        request.params.id,
+        actor.id,
+        parse(updateUserRequestSchema, request.body),
+      ),
     );
   });
   return router;

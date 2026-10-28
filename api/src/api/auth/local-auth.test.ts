@@ -1,18 +1,19 @@
 import type { Server } from "node:http";
 import { afterEach, expect, it } from "vitest";
 import { createApplication } from "../app.js";
-import { BoardDatabase } from "../board/database.js";
+import type { PostgresDatabase } from "../database/database.js";
+import { createTestDatabase } from "../test-support/database.js";
 import { parseInternalTasksEnvironment } from "../config.js";
 import { internalTasksPolicy } from "../contracts/policy.js";
 import { localAuthTestEnvironment, testAdminPassword } from "./test-support.js";
 
 let server: Server | undefined;
-let application: ReturnType<typeof createApplication> | undefined;
-let store: BoardDatabase | undefined;
+let application: Awaited<ReturnType<typeof createApplication>> | undefined;
+let store: PostgresDatabase | undefined;
 
 afterEach(async () => {
   await application?.close();
-  store?.close();
+  await store?.close();
   server?.closeAllConnections();
   if (server) await new Promise<void>((resolve) => server!.close(() => resolve()));
 });
@@ -22,8 +23,8 @@ it("runs local admin and board routes, and revokes logout", async () => {
     ...localAuthTestEnvironment,
     OPERATIONS_AGENT_PUBLIC_URL: "https://tasks.example.test",
   });
-  store = new BoardDatabase(":memory:");
-  application = createApplication(config, store);
+  store = createTestDatabase();
+  application = await createApplication(config, store);
   server = application.app.listen(0, "127.0.0.1");
   await new Promise<void>((resolve) => server!.once("listening", resolve));
   const address = server.address();

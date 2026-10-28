@@ -1,15 +1,13 @@
 import { parseInternalTasksEnvironment } from "./config.js";
-import { mkdir } from "node:fs/promises";
-import { join } from "node:path";
 
 import { createApplication } from "./app.js";
-import { BoardDatabase } from "./board/database.js";
+import { PostgresDatabase } from "./database/database.js";
 
 const config = parseInternalTasksEnvironment(process.env);
-await mkdir(config.dataDirectory, { recursive: true, mode: 0o700 });
-const store = new BoardDatabase(join(config.dataDirectory, "chats.sqlite"));
+if (!process.env.DATABASE_URL) throw new Error("DATABASE_URL is required.");
+const store = new PostgresDatabase(process.env.DATABASE_URL);
 
-const application = createApplication(config, store);
+const application = await createApplication(config, store);
 
 const server = application.app.listen(config.port, "0.0.0.0");
 

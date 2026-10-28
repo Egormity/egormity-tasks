@@ -1,7 +1,8 @@
 import { randomBytes, randomUUID, scryptSync, timingSafeEqual } from "node:crypto";
-import type { DatabaseSync } from "node:sqlite";
 
 import type { User } from "../contracts/auth.js";
+import type { QueryExecutor } from "../database/database.js";
+import { PostgresDatabase } from "../database/database.js";
 import { HttpError } from "../http-error.js";
 
 export type UserCredentials = User & {
@@ -33,96 +34,63 @@ export const verifyPassword = (password: string, passwordHash: string) => {
   return timingSafeEqual(actual, expected);
 };
 
+const userColumns = `id, username, role, password_hash AS "passwordHash",
+  session_version AS "sessionVersion"`;
+
 export class UserStore {
-  constructor(
-    private readonly db: DatabaseSync,
-    bootstrapAdmin: User,
-    bootstrapPasswordHash: string,
-  ) {
-    db.exec(`
-      CREATE TABLE IF NOT EXISTS app_users (
-        id TEXT PRIMARY KEY,
-        name TEXT NOT NULL,
-        email TEXT NOT NULL COLLATE NOCASE UNIQUE,
-        role TEXT NOT NULL CHECK (role IN ('admin', 'manager')),
-        passwordHash TEXT NOT NULL,
-        sessionVersion INTEGER NOT NULL DEFAULT 0,
-        updatedAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-      );
-    `);
-    const userColumns = db.prepare("PRAGMA table_info(app_users)").all() as Array<{
-      name: string;
-    }>;
-    if (!userColumns.some((column) => column.name === "username")) {
-      db.exec("ALTER TABLE app_users ADD COLUMN username TEXT");
-      db.exec("UPDATE app_users SET username = email WHERE username IS NULL");
-    }
-    db.exec(
-      "CREATE UNIQUE INDEX IF NOT EXISTS app_users_username_unique ON app_users(username COLLATE NOCASE)",
-    );
-    db.prepare(
-      "INSERT OR IGNORE INTO app_users (id, name, email, role, passwordHash, sessionVersion, username) VALUES (?, ?, ?, ?, ?, 0, ?)",
-    ).run(
-      bootstrapAdmin.id,
-      bootstrapAdmin.username,
-      bootstrapAdmin.username,
-      bootstrapAdmin.role,
-      bootstrapPasswordHash,
-      bootstrapAdmin.username,
-    );
-  }
+  constructor(private readonly db: PostgresDatabase) {}
 
-  findById = (id: string): UserCredentials | null => {
-    const row = this.db
-      .prepare(
-        "SELECT id, username, role, passwordHash, sessionVersion FROM app_users WHERE id = ?",
-      )
-      .get(id) as UserRow | undefined;
-    return row ?? null;
+  ensureBootstrapAdmin = async (user: User, passwordHash: string, displayName: string) => {
+    await this.db.query(
+      `INSERT INTO app_users
+        (id, name, email, role, password_hash, session_version, username)
+       VALUES ($1, $2, $3, $4, $5, 0, $3)
+       ON CONFLICT (id) DO NOTHING`,
+      [user.id, displayName, user.username, user.role, passwordHash],
+    );
   };
 
-  findByUsername = (username: string): UserCredentials | null => {
-    const row = this.db
-      .prepare(
-        "SELECT id, username, role, passwordHash, sessionVersion FROM app_users WHERE username = ? COLLATE NOCASE",
-      )
-      .get(username.trim()) as UserRow | undefined;
-    return row ?? null;
+  findById = async (id: string, executor: QueryExecutor = this.db) => {
+    const rows = await executor.query<UserRow>(
+      `SELECT ${userColumns} FROM app_users WHERE id = $1`,
+      [id],
+    );
+    return rows[0] ?? null;
   };
 
-  list = (): User[] =>
-    this.db
-      .prepare("SELECT id, username, role FROM app_users ORDER BY username COLLATE NOCASE")
-      .all() as User[];
+  findByUsername = async (username: string) => {
+    const rows = await this.db.query<UserRow>(
+      `SELECT ${userColumns} FROM app_users WHERE lower(username) = lower($1)`,
+      [username.trim()],
+    );
+    return rows[0] ?? null;
+  };
 
-  create = (input: { username: string; role: User["role"]; password: string }): User => {
+  list = async (): Promise<User[]> =>
+    this.db.query<User>("SELECT id, username, role FROM app_users ORDER BY lower(username)");
+
+  create = async (input: { username: string; role: User["role"]; password: string }) => {
     const user: User = {
       id: randomUUID(),
       username: input.username,
       role: input.role,
     };
     try {
-      this.db
-        .prepare(
-          "INSERT INTO app_users (id, name, email, role, passwordHash, sessionVersion, username) VALUES (?, ?, ?, ?, ?, 0, ?)",
-        )
-        .run(
-          user.id,
-          user.username,
-          user.username,
-          user.role,
-          hashPassword(input.password),
-          user.username,
-        );
+      await this.db.query(
+        `INSERT INTO app_users
+          (id, name, email, role, password_hash, session_version, username)
+         VALUES ($1, $2, $2, $3, $4, 0, $2)`,
+        [user.id, user.username, user.role, hashPassword(input.password)],
+      );
     } catch (error) {
-      if (isUsernameConflict(error))
+      if (isUniqueViolation(error))
         throw new HttpError(409, "A user with this username already exists.");
       throw error;
     }
     return user;
   };
 
-  update = (
+  update = async (
     id: string,
     actorId: string,
     input: {
@@ -130,61 +98,62 @@ export class UserStore {
       role: User["role"];
       password?: string | undefined;
     },
-  ): User => {
-    const current = this.findById(id);
+  ) => {
+    const current = await this.findById(id);
     if (!current) throw new HttpError(404, "User not found.");
     if (actorId === id && input.role !== current.role)
       throw new HttpError(409, "You cannot change your own role.");
-    if (current.role === "admin" && input.role === "manager") {
-      const admins = this.db
-        .prepare("SELECT COUNT(*) AS count FROM app_users WHERE role = 'admin'")
-        .get() as { count: number };
-      if (admins.count <= 1)
-        throw new HttpError(409, "At least one admin account must remain.");
-    }
+
     const user: User = { id, username: input.username, role: input.role };
     try {
-      this.db
-        .prepare(
+      await this.db.transaction(async (executor) => {
+        if (current.role === "admin" && input.role === "manager") {
+          const admins = await executor.query<{ id: string }>(
+            "SELECT id FROM app_users WHERE role = 'admin' FOR UPDATE",
+          );
+          if (admins.length <= 1)
+            throw new HttpError(409, "At least one admin account must remain.");
+        }
+        await executor.query(
           `UPDATE app_users
-           SET name = ?, email = ?, username = ?, role = ?,
-               passwordHash = COALESCE(?, passwordHash),
-               sessionVersion = sessionVersion + ?,
-               updatedAt = CURRENT_TIMESTAMP
-           WHERE id = ?`,
-        )
-        .run(
-          user.username,
-          user.username,
-          user.username,
-          user.role,
-          input.password ? hashPassword(input.password) : null,
-          input.password || input.role !== current.role ? 1 : 0,
-          id,
+           SET name = $1, email = $1, username = $1, role = $2,
+               password_hash = COALESCE($3, password_hash),
+               session_version = session_version + $4,
+               updated_at = CURRENT_TIMESTAMP
+           WHERE id = $5`,
+          [
+            user.username,
+            user.role,
+            input.password ? hashPassword(input.password) : null,
+            input.password || input.role !== current.role ? 1 : 0,
+            id,
+          ],
         );
+      });
     } catch (error) {
-      if (isUsernameConflict(error))
+      if (isUniqueViolation(error))
         throw new HttpError(409, "A user with this username already exists.");
       throw error;
     }
     return user;
   };
 
-  remove = (id: string, actorId: string): User => {
-    const current = this.findById(id);
-    if (!current) throw new HttpError(404, "User not found.");
-    if (actorId === id) throw new HttpError(409, "You cannot delete your own account.");
-    if (current.role === "admin") {
-      const admins = this.db
-        .prepare("SELECT COUNT(*) AS count FROM app_users WHERE role = 'admin'")
-        .get() as { count: number };
-      if (admins.count <= 1)
-        throw new HttpError(409, "At least one admin account must remain.");
-    }
-    this.db.prepare("DELETE FROM app_users WHERE id = ?").run(id);
-    return { id: current.id, username: current.username, role: current.role };
-  };
+  remove = async (id: string, actorId: string) =>
+    this.db.transaction(async (executor) => {
+      const current = await this.findById(id, executor);
+      if (!current) throw new HttpError(404, "User not found.");
+      if (actorId === id) throw new HttpError(409, "You cannot delete your own account.");
+      if (current.role === "admin") {
+        const admins = await executor.query<{ id: string }>(
+          "SELECT id FROM app_users WHERE role = 'admin' FOR UPDATE",
+        );
+        if (admins.length <= 1)
+          throw new HttpError(409, "At least one admin account must remain.");
+      }
+      await executor.query("DELETE FROM app_users WHERE id = $1", [id]);
+      return { id: current.id, username: current.username, role: current.role };
+    });
 }
 
-const isUsernameConflict = (error: unknown) =>
-  error instanceof Error && error.message.includes("app_users.username");
+const isUniqueViolation = (error: unknown) =>
+  typeof error === "object" && error !== null && "code" in error && error.code === "23505";

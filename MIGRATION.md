@@ -6,6 +6,31 @@ root-level monorepo source tree and Compose files have been removed.
 The source was originally imported from `amazi-internal-tasks` commit
 `a489e5d1e46265d34bee5373e244e0a0e425064f` (v0.19.2), then migrated as v0.20.0.
 
+## Amazi-managed PostgreSQL
+
+The API source now uses Amazi-managed PostgreSQL via `DATABASE_URL`; it applies its schema migration
+at startup. The active development snapshot was imported into the project's shared database from
+`api/.runtime/migrations/pg-cutover-preview/board.sqlite`. Its verified counts are 5 accounts,
+183 tasks, 9 tags, 6 comments, 1,390 history events, 170 attachment files, 1 board import and 1 task/chat
+link. The source SQLite file and its original credentials remain unchanged; the importer copies stored
+password verifiers without exposing them.
+
+The active production release has not been switched to this new source. It must not be republished
+until production's existing `/data/chats.sqlite` has been exported and reconciled with the shared
+PostgreSQL contents. The production SQLite volume has not been changed or merged. This is important:
+the project PostgreSQL database is shared by environments, but legacy SQLite files do not synchronize.
+
+For a trusted, verified SQLite export, first build the API, then run from `api/`:
+
+```sh
+npm run migrate:sqlite -- /path/to/board.sqlite SOURCE_KEY
+```
+
+The migration is transactional, checks SQLite integrity and foreign keys, copies only the maintained
+account and board tables, stores attachment bytes as PostgreSQL `BYTEA`, and records a source digest.
+It refuses to import into a populated destination; the same source key and file may be retried safely.
+Do not use it to overwrite PostgreSQL or assume it merges production-only records.
+
 ## Runtime compatibility
 
 The existing environment variable names, UI languages, administrator authentication, board and account routes,

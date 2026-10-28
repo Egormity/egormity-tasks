@@ -3,7 +3,7 @@
 This project contains exactly two Amazi applications with independent source roots:
 
 - `web/` — browser UI only. It includes the Web copy of transport contracts from `api/src/api/contracts`.
-- `api/` — HTTP API, local administrator authentication, SQLite task board, comments, and attachments.
+- `api/` — HTTP API, local administrator authentication, Amazi PostgreSQL task board, comments, and attachments.
 
 Treat these two roots as the maintained application source. Do not restore the retired root-level
 `src/` tree or Compose deployment files. Keep the Web contract copy

@@ -7,7 +7,8 @@ import { afterEach, beforeEach, expect, it } from "vitest";
 import type { BoardSnapshot, Task, TaskTag } from "./contracts/board.js";
 
 import { createApplication } from "./app.js";
-import { BoardDatabase } from "./board/database.js";
+import { createTestDatabase } from "./test-support/database.js";
+import type { PostgresDatabase } from "./database/database.js";
 import {
   localAdminCookieToken,
   localAuthTestEnvironment,
@@ -16,9 +17,9 @@ import {
 
 let servers: Server[];
 
-let application: ReturnType<typeof createApplication>;
+let application: Awaited<ReturnType<typeof createApplication>>;
 
-let store: BoardDatabase;
+let store: PostgresDatabase;
 
 let base: string;
 
@@ -52,19 +53,19 @@ const call = (
 
 beforeEach(async () => {
   servers = [];
-  store = new BoardDatabase(":memory:");
+  store = createTestDatabase();
   const config = parseInternalTasksEnvironment({
     ...localAuthTestEnvironment,
     OPERATIONS_AGENT_PUBLIC_URL: "https://operations.example.test/",
   });
   token = localAdminCookieToken(config);
-  application = createApplication(config, store);
+  application = await createApplication(config, store);
   base = await listen(application.app);
 });
 
 afterEach(async () => {
-  await application.close();
-  store.close();
+  await application?.close();
+  await store.close();
   for (const server of servers) {
     server.closeAllConnections();
     await new Promise<void>((resolve) => server.close(() => resolve()));
@@ -238,9 +239,10 @@ it("protects the board, preserves ordering and rejects stale edits", async () =>
   ]);
   const current = snapshot.cards.find((card) => card.id === first.id)!;
   // Historical task metadata must not leak through the maintained board contract.
-  store.db
-    .prepare("UPDATE task_cards SET data = ? WHERE id = ?")
-    .run(JSON.stringify({ ...current, agentVerdict: "Legacy metadata" }), current.id);
+  await store.query("UPDATE task_cards SET data = $1 WHERE id = $2", [
+    JSON.stringify({ ...current, agentVerdict: "Legacy metadata" }),
+    current.id,
+  ]);
   const cleanSnapshot = (await (await call("/board")).json()) as BoardSnapshot;
   expect(cleanSnapshot.cards.find((card) => card.id === first.id)).not.toHaveProperty(
     "agentVerdict",
@@ -361,9 +363,9 @@ it("creates, edits, orders and safely removes persisted columns and dividers", a
 });
 
 it("reads legacy dividers and gives them a safe default title and placement", async () => {
-  store.db
-    .prepare("UPDATE board_settings SET data = ? WHERE key = 'dividers'")
-    .run(JSON.stringify([{ id: "legacy-divider" }]));
+  await store.query("UPDATE board_settings SET data = $1 WHERE key = 'dividers'", [
+    JSON.stringify([{ id: "legacy-divider" }]),
+  ]);
   const snapshot = (await (await call("/board")).json()) as BoardSnapshot;
   expect(snapshot.dividers).toEqual([
     { id: "legacy-divider", title: "Раздел 1", columnId: "backlog", order: 0 },

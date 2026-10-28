@@ -11,6 +11,7 @@
     "build": "npm run build:api",
     "build:api": "node build.mjs",
     "start:api": "node dist/api/main.js",
+    "migrate:sqlite": "node dist/api/migrate-sqlite.js",
     "typecheck": "tsc6 --noEmit",
     "lint": "eslint src/api && prettier --check src/api",
     "format": "prettier --write src/api",
@@ -27,6 +28,7 @@
     "@tiptap/starter-kit": "^3.29.0",
     "@types/express": "^5.0.5",
     "@types/node": "^24.10.1",
+    "@types/pg": "^8.23.1",
     "@types/react": "^19.2.6",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.1.1",
@@ -36,6 +38,7 @@
     "fflate": "^0.8.2",
     "jsdom": "29.1.1",
     "lucide-react": "^0.555.0",
+    "pg-mem": "^3.0.14",
     "prettier": "^3.6.2",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
@@ -50,6 +53,7 @@
   },
   "dependencies": {
     "express": "^5.2.1",
+    "pg": "^8.23.1",
     "zod": "^4.1.13"
   }
 }

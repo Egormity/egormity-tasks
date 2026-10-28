@@ -1,9 +1,7 @@
 import { randomUUID } from "node:crypto";
-import type { DatabaseSync } from "node:sqlite";
 
 import type {
   BoardSnapshot,
-  BoardDivider,
   Task,
   TaskAttachment,
   TaskEvent,
@@ -11,239 +9,34 @@ import type {
   TaskTag,
   TaskUpdate,
 } from "../contracts/board.js";
-import {
-  boardColumns as defaultBoardColumns,
-  boardColumnsSchema,
-  boardDividerSchema,
-} from "../contracts/board-columns.js";
-import { z } from "zod";
-
-import { HttpError } from "../auth/auth.js";
-import { CommentStore } from "./comments/comment-store.js";
 import { taskSchema } from "../contracts/board.js";
-
-const storedBoardDividerSchema = z
-  .object({
-    id: z.string().min(1).max(160),
-    title: z.string().trim().min(1).max(120).optional(),
-    columnId: z.string().min(1).max(160).optional(),
-    order: z.number().int().nonnegative().optional(),
-  })
-  .strict();
-
-type OrderedBoardItem =
-  | { readonly kind: "card"; readonly id: string; readonly card: Task }
-  | { readonly kind: "divider"; readonly id: string; readonly divider: BoardDivider };
+import type { QueryExecutor } from "../database/database.js";
+import { PostgresDatabase } from "../database/database.js";
+import { HttpError } from "../http-error.js";
+import { CommentStore } from "./comments/comment-store.js";
+import { BoardLayoutStore } from "./board-layout-store.js";
+import { BoardRepository } from "./board-repository.js";
 
 export class BoardStore {
   readonly comments: CommentStore;
-  constructor(readonly db: DatabaseSync) {
-    db.exec(`
-      CREATE TABLE IF NOT EXISTS task_cards (id TEXT PRIMARY KEY, data TEXT NOT NULL);
-      CREATE TABLE IF NOT EXISTS task_tags (id TEXT PRIMARY KEY, name TEXT UNIQUE NOT NULL, data TEXT NOT NULL);
-      CREATE TABLE IF NOT EXISTS task_events (
-        id TEXT PRIMARY KEY, cardId TEXT NOT NULL REFERENCES task_cards(id), data TEXT NOT NULL
-      );
-      CREATE INDEX IF NOT EXISTS task_events_card ON task_events(cardId);
-      CREATE TABLE IF NOT EXISTS task_files (sha256 TEXT PRIMARY KEY, bytes BLOB NOT NULL);
-      CREATE TABLE IF NOT EXISTS task_imports (source TEXT PRIMARY KEY, digest TEXT NOT NULL, data TEXT NOT NULL);
-      CREATE TABLE IF NOT EXISTS board_settings (key TEXT PRIMARY KEY, data TEXT NOT NULL);
-    `);
-    this.db
-      .prepare("INSERT OR IGNORE INTO board_settings (key, data) VALUES (?, ?)")
-      .run("columns", JSON.stringify(defaultBoardColumns));
-    this.db
-      .prepare("INSERT OR IGNORE INTO board_settings (key, data) VALUES (?, ?)")
-      .run("dividers", "[]");
-    this.comments = new CommentStore(this);
+  readonly layout: BoardLayoutStore;
+  private readonly repository: BoardRepository;
+
+  constructor(readonly db: PostgresDatabase) {
+    this.repository = new BoardRepository(db);
+    this.layout = new BoardLayoutStore(db);
+    this.comments = new CommentStore(db, this);
   }
 
-  private readSetting = <T>(key: string, fallback: T): T => {
-    const row = this.db.prepare("SELECT data FROM board_settings WHERE key = ?").get(key);
-    return row ? (JSON.parse(String(row.data)) as T) : fallback;
-  };
+  initialize = () => this.layout.initialize();
 
-  private writeSetting = (key: string, value: unknown) =>
-    this.db
-      .prepare(
-        "INSERT INTO board_settings (key, data) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET data=excluded.data",
-      )
-      .run(key, JSON.stringify(value));
+  columns = () => this.layout.columns();
 
-  columns = () => boardColumnsSchema.parse(this.readSetting("columns", defaultBoardColumns));
+  dividers = () => this.layout.dividers();
 
-  dividers = (): BoardDivider[] => {
-    const stored = z
-      .array(storedBoardDividerSchema)
-      .parse(this.readSetting<unknown>("dividers", []));
-    const legacyColumnId = this.columns()[0]!.id;
-    const existingTasks = this.cards().filter(
-      (card) => card.status === legacyColumnId && !card.archivedAt,
-    );
-    const legacyOrder = Math.max(-1, ...existingTasks.map(({ order }) => order)) + 1;
-    let legacyIndex = 0;
-    return stored.map((item, index) => {
-      const order = item.order ?? legacyOrder + legacyIndex++;
-      return boardDividerSchema.parse({
-        id: item.id,
-        title: item.title ?? `Раздел ${index + 1}`,
-        columnId: item.columnId ?? legacyColumnId,
-        order,
-      });
-    });
-  };
-
-  private columnItems = (columnId: string, excludingCardId?: string): OrderedBoardItem[] => {
-    const items: OrderedBoardItem[] = [
-      ...this.cards()
-        .filter(
-          (card) => card.status === columnId && !card.archivedAt && card.id !== excludingCardId,
-        )
-        .map((card) => ({ kind: "card" as const, id: card.id, card })),
-      ...this.dividers()
-        .filter((divider) => divider.columnId === columnId)
-        .map((divider) => ({ kind: "divider" as const, id: divider.id, divider })),
-    ];
-    return items.sort((first, second) => {
-      const orderDifference =
-        (first.kind === "card" ? first.card.order : first.divider.order) -
-        (second.kind === "card" ? second.card.order : second.divider.order);
-      return orderDifference || first.id.localeCompare(second.id);
-    });
-  };
-
-  private writeColumnOrder = (items: readonly OrderedBoardItem[], primaryCardId?: string) => {
-    const dividers = this.dividers();
-    let dividerChanged = false;
-    items.forEach((item, order) => {
-      if (item.kind === "card") {
-        if (item.id === primaryCardId) {
-          this.save({ ...item.card, order });
-        } else if (item.card.order !== order) {
-          this.save({ ...item.card, order, revision: item.card.revision + 1 });
-        }
-        return;
-      }
-      const index = dividers.findIndex((divider) => divider.id === item.id);
-      if (index >= 0 && dividers[index]!.order !== order) {
-        dividers[index] = { ...dividers[index]!, order };
-        dividerChanged = true;
-      }
-    });
-    if (dividerChanged) this.writeSetting("dividers", dividers);
-  };
-
-  createColumn = (input: { label: string; accent: string }) => {
-    const columns = this.columns();
-    if (columns.length >= 20)
-      throw new HttpError(409, "The board can have at most 20 columns.");
-    const column = { ...input, id: `column-${randomUUID()}` };
-    const updated = boardColumnsSchema.parse([...columns, column]);
-    this.writeSetting("columns", updated);
-    return column;
-  };
-
-  updateColumn = (id: string, input: { label: string; accent: string }) => {
-    const columns = this.columns();
-    const current = columns.find((column) => column.id === id);
-    if (!current) throw new HttpError(404, "Column not found.");
-    const saved = { ...current, ...input };
-    const updated = columns.map((column) => (column.id === id ? saved : column));
-    this.writeSetting("columns", boardColumnsSchema.parse(updated));
-    return saved;
-  };
-
-  reorderColumns = (ids: string[]) => {
-    const columns = this.columns();
-    if (
-      ids.length !== columns.length ||
-      new Set(ids).size !== ids.length ||
-      ids.some((id) => !columns.some((column) => column.id === id))
-    )
-      throw new HttpError(400, "Column order must include every column exactly once.");
-    const byId = new Map(columns.map((column) => [column.id, column]));
-    const updated = ids.map((id) => byId.get(id)!);
-    this.writeSetting("columns", updated);
-    return updated;
-  };
-
-  deleteColumn = (id: string) => {
-    const columns = this.columns();
-    if (!columns.some((column) => column.id === id))
-      throw new HttpError(404, "Column not found.");
-    if (columns.length <= 1)
-      throw new HttpError(409, "The last board column cannot be deleted.");
-    if (this.cards().some((card) => card.status === id))
-      throw new HttpError(409, "Move or archive the column's tasks before deleting it.");
-    if (this.dividers().some((divider) => divider.columnId === id))
-      throw new HttpError(409, "Remove the column's dividers before deleting it.");
-    this.writeSetting(
-      "columns",
-      columns.filter((column) => column.id !== id),
-    );
-    return { id };
-  };
-
-  addDivider = (input: { title: string; columnId: string }) => {
-    if (!this.columns().some(({ id }) => id === input.columnId))
-      throw new HttpError(400, "Choose a current board column.");
-    const items = this.columnItems(input.columnId);
-    const divider: BoardDivider = {
-      id: randomUUID(),
-      title: input.title,
-      columnId: input.columnId,
-      order: items.length
-        ? Math.max(
-            ...items.map((item) =>
-              item.kind === "card" ? item.card.order : item.divider.order,
-            ),
-          ) + 1
-        : 0,
-    };
-    const dividers = this.dividers();
-    dividers.push(divider);
-    this.writeSetting("dividers", dividers);
-    return divider;
-  };
-
-  updateDivider = (id: string, title: string) => {
-    const dividers = this.dividers();
-    const index = dividers.findIndex((divider) => divider.id === id);
-    if (index < 0) throw new HttpError(404, "Divider not found.");
-    const updated = { ...dividers[index]!, title };
-    dividers[index] = updated;
-    this.writeSetting("dividers", dividers);
-    return updated;
-  };
-
-  deleteDivider = (id: string) => {
-    const dividers = this.dividers();
-    if (!dividers.some((divider) => divider.id === id))
-      throw new HttpError(404, "Divider not found.");
-    this.writeSetting(
-      "dividers",
-      dividers.filter((divider) => divider.id !== id),
-    );
-    return { id };
-  };
-
-  transaction = <T>(action: () => T): T => {
-    this.db.exec("BEGIN IMMEDIATE");
-    try {
-      const result = action();
-      this.db.exec("COMMIT");
-      return result;
-    } catch (error) {
-      this.db.exec("ROLLBACK");
-      throw error;
-    }
-  };
-
-  cards = (): Task[] =>
-    this.db
-      .prepare("SELECT data FROM task_cards")
-      .all()
-      .map((row) => taskSchema.parse(JSON.parse(String(row.data))))
+  cards = async (repository = this.repository): Promise<Task[]> =>
+    (await repository.cards())
+      .map((card) => taskSchema.parse(card))
       .sort(
         (a, b) =>
           a.order - b.order ||
@@ -251,33 +44,30 @@ export class BoardStore {
           a.id.localeCompare(b.id),
       );
 
-  tags = (): TaskTag[] =>
-    this.db
-      .prepare("SELECT data FROM task_tags ORDER BY name")
-      .all()
-      .map((row) => JSON.parse(String(row.data)) as TaskTag);
+  tags = (repository = this.repository) => repository.tags();
 
-  snapshot = (): BoardSnapshot => ({
-    cards: this.cards(),
-    tags: this.tags(),
-    columns: this.columns(),
-    dividers: this.dividers(),
+  snapshot = async (): Promise<BoardSnapshot> => ({
+    cards: await this.cards(),
+    tags: await this.tags(),
+    columns: await this.columns(),
+    dividers: await this.dividers(),
   });
 
-  get = (id: string): Task => {
-    const row = this.db.prepare("SELECT data FROM task_cards WHERE id = ?").get(id);
-    if (!row) throw new HttpError(404, "Task not found.");
-    return taskSchema.parse(JSON.parse(String(row.data)));
+  get = async (id: string, executor: QueryExecutor = this.db): Promise<Task> => {
+    const card = await new BoardRepository(executor).card(id);
+    if (!card) throw new HttpError(404, "Task not found.");
+    return taskSchema.parse(card);
   };
 
-  save = (card: Task) =>
-    this.db
-      .prepare(
-        "INSERT INTO task_cards VALUES (?, ?) ON CONFLICT(id) DO UPDATE SET data = excluded.data",
-      )
-      .run(card.id, JSON.stringify(card));
+  save = (card: Task, executor: QueryExecutor = this.db) =>
+    new BoardRepository(executor).saveCard(card);
 
-  event = (cardId: string, type: string, payload: Record<string, unknown>) => {
+  event = async (
+    cardId: string,
+    type: string,
+    payload: Record<string, unknown>,
+    executor: QueryExecutor = this.db,
+  ) => {
     const event: TaskEvent = {
       id: randomUUID(),
       cardId,
@@ -285,31 +75,32 @@ export class BoardStore {
       payload,
       createdAt: new Date().toISOString(),
     };
-    this.db
-      .prepare("INSERT INTO task_events VALUES (?, ?, ?)")
-      .run(event.id, cardId, JSON.stringify(event));
+    await new BoardRepository(executor).event(event);
   };
 
-  events = (id: string): TaskEvent[] => {
-    this.get(id);
-    return this.db
-      .prepare("SELECT data FROM task_events WHERE cardId = ? ORDER BY rowid")
-      .all(id)
-      .map((row) => JSON.parse(String(row.data)) as TaskEvent)
-      .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+  events = async (id: string): Promise<TaskEvent[]> => {
+    await this.get(id);
+    return (await this.repository.events(id)).sort((a, b) =>
+      a.createdAt.localeCompare(b.createdAt),
+    );
   };
 
-  validateTags = (ids: string[]) => {
-    const known = new Set(this.tags().map((tag) => tag.id));
+  getFile = (sha256: string) => this.repository.fileBytes(sha256);
+
+  listComments = (cardId: string) => this.repository.comments(cardId);
+
+  validateTags = async (ids: string[], repository = this.repository) => {
+    const known = new Set((await repository.tags()).map((tag) => tag.id));
     if (new Set(ids).size !== ids.length || ids.some((id) => !known.has(id)))
       throw new HttpError(400, "One or more tags do not exist.");
   };
 
-  create = (input: TaskInput, actor: string): Task =>
-    this.transaction(() => {
-      if (!this.columns().some((column) => column.id === input.status))
+  create = (input: TaskInput, actor: string) =>
+    this.db.transaction(async (executor) => {
+      const repository = new BoardRepository(executor);
+      if (!(await this.layout.columns(repository)).some((column) => column.id === input.status))
         throw new HttpError(400, "Choose a current board column.");
-      this.validateTags(input.tagIds);
+      await this.validateTags(input.tagIds, repository);
       const now = new Date().toISOString();
       const card: Task = {
         ...input,
@@ -321,26 +112,33 @@ export class BoardStore {
         attachments: [],
         revision: 1,
       };
-      this.writeColumnOrder(
-        [{ kind: "card", id: card.id, card }, ...this.columnItems(input.status)],
+      const items = await this.layout.columnItems(input.status, undefined, repository);
+      await this.layout.writeColumnOrder(
+        [{ kind: "card", id: card.id, card }, ...items],
         card.id,
+        repository,
       );
-      this.event(card.id, "created", { actor });
+      await this.event(card.id, "created", { actor }, executor);
       return card;
     });
 
-  update = (id: string, input: TaskUpdate, actor: string): Task =>
-    this.transaction(() => {
-      const current = this.get(id);
+  update = (id: string, input: TaskUpdate, actor: string) =>
+    this.db.transaction(async (executor) => {
+      const repository = new BoardRepository(executor);
+      const current = await this.get(id, executor);
       this.checkRevision(current, input.revision);
-      if (input.tagIds) this.validateTags(input.tagIds);
+      if (input.tagIds) await this.validateTags(input.tagIds, repository);
       const { revision: _revision, archived, beforeId, attachmentIds, ...fields } = input;
       void _revision;
-      if (fields.status && !this.columns().some((column) => column.id === fields.status))
+      if (
+        fields.status &&
+        !(await this.layout.columns(repository)).some((column) => column.id === fields.status)
+      )
         throw new HttpError(400, "Choose a current board column.");
       if (
         attachmentIds?.some(
-          (attachmentId) => !current.attachments.some((a) => a.id === attachmentId),
+          (attachmentId) =>
+            !current.attachments.some((attachment) => attachment.id === attachmentId),
         )
       )
         throw new HttpError(400, "Attachment not found.");
@@ -355,7 +153,7 @@ export class BoardStore {
         attachments:
           attachmentIds === undefined
             ? current.attachments
-            : current.attachments.filter((a) => attachmentIds.includes(a.id)),
+            : current.attachments.filter((attachment) => attachmentIds.includes(attachment.id)),
         revision: current.revision + 1,
         updatedAt: new Date().toISOString(),
         archivedAt:
@@ -366,55 +164,62 @@ export class BoardStore {
               : null,
       };
       if (beforeId !== undefined || card.status !== current.status || archived === false) {
-        const column = this.columnItems(card.status, id);
+        const column = await this.layout.columnItems(card.status, id, repository);
         const position = beforeId
           ? column.findIndex((item) => item.id === beforeId)
           : column.length;
         if (position < 0) throw new HttpError(409, "The board changed. Refresh and try again.");
         column.splice(position, 0, { kind: "card", id: card.id, card });
         if (current.status !== card.status && !current.archivedAt)
-          this.writeColumnOrder(this.columnItems(current.status, id));
+          await this.layout.writeColumnOrder(
+            await this.layout.columnItems(current.status, id, repository),
+            undefined,
+            repository,
+          );
         card.order = position;
-        this.writeColumnOrder(column, id);
+        await this.layout.writeColumnOrder(column, id, repository);
       } else {
-        this.save(card);
+        await repository.saveCard(card);
       }
-      const changes = Object.entries(card)
-        .filter(
-          ([field, value]) =>
-            !["revision", "updatedAt"].includes(field) &&
-            JSON.stringify(value) !== JSON.stringify(current[field as keyof Task]),
-        )
-        .map(([field, value]) => {
-          if (field === "attachments")
-            return {
-              field,
-              added: card.attachments.filter(
-                (item) => !current.attachments.some((old) => old.id === item.id),
-              ),
-              removed: current.attachments.filter(
-                (item) => !card.attachments.some((next) => next.id === item.id),
-              ),
-            };
-          if (field === "tagIds") {
-            const names = new Map(this.tags().map((tag) => [tag.id, tag.name]));
-            return {
-              field: "tags",
-              added: card.tagIds
-                .filter((id) => !current.tagIds.includes(id))
-                .map((id) => names.get(id) ?? id),
-              removed: current.tagIds
-                .filter((id) => !card.tagIds.includes(id))
-                .map((id) => names.get(id) ?? id),
-            };
-          }
-          return { field, from: current[field as keyof Task], to: value };
-        });
+
+      const changedFields = Object.entries(card).filter(
+        ([field, value]) =>
+          !["revision", "updatedAt"].includes(field) &&
+          JSON.stringify(value) !== JSON.stringify(current[field as keyof Task]),
+      );
+      const tagNames = changedFields.some(([field]) => field === "tagIds")
+        ? new Map((await repository.tags()).map((tag) => [tag.id, tag.name]))
+        : new Map<string, string>();
+      const changes = changedFields.map(([field, value]) => {
+        if (field === "attachments")
+          return {
+            field,
+            added: card.attachments.filter(
+              (attachment) => !current.attachments.some((old) => old.id === attachment.id),
+            ),
+            removed: current.attachments.filter(
+              (attachment) => !card.attachments.some((next) => next.id === attachment.id),
+            ),
+          };
+        if (field === "tagIds") {
+          return {
+            field: "tags",
+            added: card.tagIds
+              .filter((tagId) => !current.tagIds.includes(tagId))
+              .map((tagId) => tagNames.get(tagId) ?? tagId),
+            removed: current.tagIds
+              .filter((tagId) => !card.tagIds.includes(tagId))
+              .map((tagId) => tagNames.get(tagId) ?? tagId),
+          };
+        }
+        return { field, from: current[field as keyof Task], to: value };
+      });
       if (changes.length)
-        this.event(
+        await this.event(
           id,
           archived === true ? "archived" : archived === false ? "restored" : "content_changed",
           { actor, changes },
+          executor,
         );
       return card;
     });
@@ -424,38 +229,41 @@ export class BoardStore {
       throw new HttpError(409, "The task changed. Reopen it before saving.");
   };
 
-  saveTag = (input: Omit<TaskTag, "id">, id: string = randomUUID()): TaskTag => {
-    const duplicate = this.tags().find((tag) => tag.name === input.name && tag.id !== id);
-    if (duplicate) throw new HttpError(409, "A tag with this name already exists.");
-    const tag = { ...input, id };
-    this.db
-      .prepare(
-        "INSERT INTO task_tags VALUES (?, ?, ?) ON CONFLICT(id) DO UPDATE SET name=excluded.name, data=excluded.data",
-      )
-      .run(id, tag.name, JSON.stringify(tag));
-    return tag;
-  };
+  saveTag = async (input: Omit<TaskTag, "id">, id: string = randomUUID()) =>
+    this.db.transaction(async (executor) => {
+      const repository = new BoardRepository(executor);
+      const duplicate = (await repository.tags()).find(
+        (tag) => tag.name === input.name && tag.id !== id,
+      );
+      if (duplicate) throw new HttpError(409, "A tag with this name already exists.");
+      const tag = { ...input, id };
+      await repository.saveTag(tag);
+      return tag;
+    });
 
   deleteTag = (id: string, actor: string) =>
-    this.transaction(() => {
-      const tag = this.tags().find((item) => item.id === id);
+    this.db.transaction(async (executor) => {
+      const repository = new BoardRepository(executor);
+      const tag = (await repository.tags()).find((item) => item.id === id);
       if (!tag) throw new HttpError(404, "Tag not found.");
       let removedCards = 0;
-      for (const card of this.cards()) {
+      for (const card of await this.cards(repository)) {
         if (!card.tagIds.includes(id)) continue;
-        this.save({
+        await repository.saveCard({
           ...card,
           tagIds: card.tagIds.filter((tagId) => tagId !== id),
           revision: card.revision + 1,
           updatedAt: new Date().toISOString(),
         });
-        this.event(card.id, "content_changed", {
-          actor,
-          changes: [{ field: "tags", removed: [tag.name] }],
-        });
+        await this.event(
+          card.id,
+          "content_changed",
+          { actor, changes: [{ field: "tags", removed: [tag.name] }] },
+          executor,
+        );
         removedCards += 1;
       }
-      this.db.prepare("DELETE FROM task_tags WHERE id = ?").run(id);
+      await repository.deleteTag(id);
       return { id, removedCards };
     });
 
@@ -465,9 +273,10 @@ export class BoardStore {
     attachment: TaskAttachment,
     bytes: Buffer,
     actor: string,
-  ): Task =>
-    this.transaction(() => {
-      const card = this.get(id);
+  ) =>
+    this.db.transaction(async (executor) => {
+      const repository = new BoardRepository(executor);
+      const card = await this.get(id, executor);
       this.checkRevision(card, revision);
       const existing = card.attachments.find((item) => item.id === attachment.id);
       if (existing) {
@@ -477,40 +286,42 @@ export class BoardStore {
       }
       if (card.attachments.length >= 10)
         throw new HttpError(400, "A task can have up to ten attachments.");
-      this.db
-        .prepare("INSERT OR IGNORE INTO task_files VALUES (?, ?)")
-        .run(attachment.sha256!, bytes);
+      await repository.insertFile(attachment.sha256!, bytes);
       const updated = {
         ...card,
         attachments: [...card.attachments, attachment],
         revision: card.revision + 1,
         updatedAt: new Date().toISOString(),
       };
-      this.save(updated);
-      this.event(id, "content_changed", {
-        actor,
-        changes: [{ field: "attachments", added: [attachment] }],
-      });
+      await repository.saveCard(updated);
+      await this.event(
+        id,
+        "content_changed",
+        { actor, changes: [{ field: "attachments", added: [attachment] }] },
+        executor,
+      );
       return updated;
     });
 
-  detach = (id: string, revision: number, attachmentId: string, actor: string): Task =>
-    this.transaction(() => {
-      const card = this.get(id);
+  detach = (id: string, revision: number, attachmentId: string, actor: string) =>
+    this.db.transaction(async (executor) => {
+      const card = await this.get(id, executor);
       this.checkRevision(card, revision);
-      const removed = card.attachments.find((a) => a.id === attachmentId);
+      const removed = card.attachments.find((attachment) => attachment.id === attachmentId);
       if (!removed) throw new HttpError(404, "Attachment not found.");
       const updated = {
         ...card,
-        attachments: card.attachments.filter((a) => a.id !== attachmentId),
+        attachments: card.attachments.filter((attachment) => attachment.id !== attachmentId),
         revision: card.revision + 1,
         updatedAt: new Date().toISOString(),
       };
-      this.save(updated);
-      this.event(id, "content_changed", {
-        actor,
-        changes: [{ field: "attachments", removed: [removed] }],
-      });
+      await this.save(updated, executor);
+      await this.event(
+        id,
+        "content_changed",
+        { actor, changes: [{ field: "attachments", removed: [removed] }] },
+        executor,
+      );
       return updated;
     });
 }

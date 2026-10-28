@@ -8,14 +8,24 @@ import { boardRoutes } from "./board/board-routes.js";
 import { BoardEvents } from "./board/board-events.js";
 import { BoardStore } from "./board/board-store.js";
 
-import type { BoardDatabase } from "./board/database.js";
+import { PostgresDatabase } from "./database/database.js";
 
-export const createApplication = (config: InternalTasksEnvironment, store: BoardDatabase) => {
+export const createApplication = async (
+  config: InternalTasksEnvironment,
+  store: PostgresDatabase,
+) => {
+  await store.migrate();
+  const users = new UserStore(store);
+  await users.ensureBootstrapAdmin(
+    localAdminUser(config),
+    config.adminPasswordHash,
+    config.adminName,
+  );
+  const board = new BoardStore(store);
+  await board.initialize();
   const app = express();
-  const users = new UserStore(store.db, localAdminUser(config), config.adminPasswordHash);
   const authentication = new UserAuthentication(config, users);
   const boardEvents = new BoardEvents();
-  const board = new BoardStore(store.db);
   app.disable("x-powered-by");
   app.set("trust proxy", 1);
   app.use((_request, response, next) => {
@@ -27,7 +37,10 @@ export const createApplication = (config: InternalTasksEnvironment, store: Board
     );
     next();
   });
-  app.get("/health", (_request, response) => response.json({ status: "ok" }));
+  app.get("/health", async (_request, response) => {
+    await store.healthCheck();
+    response.json({ status: "ok" });
+  });
   const api = express.Router();
   api.use((_request, response, next) => {
     response.setHeader("Cache-Control", "no-store");

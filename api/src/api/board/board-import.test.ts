@@ -5,28 +5,28 @@ import { join } from "node:path";
 import { afterEach, beforeEach, expect, it } from "vitest";
 
 import type { BoardImport, Task } from "../contracts/board.js";
+import { createTestDatabase } from "../test-support/database.js";
 
 import { importBoard } from "./board-import.js";
 import { BoardStore } from "./board-store.js";
-import { BoardDatabase } from "./database.js";
+import type { PostgresDatabase } from "../database/database.js";
 
 let directory: string;
-
-let chats: BoardDatabase;
-
+let database: PostgresDatabase;
 let board: BoardStore;
-
 let bundle: BoardImport;
 
 const bytes = Buffer.from("source file contents");
 
 const hash = createHash("sha256").update(bytes).digest("hex");
 
-beforeEach(() => {
+beforeEach(async () => {
   directory = mkdtempSync(join(tmpdir(), "operations-board-"));
   mkdirSync(join(directory, "files"));
-  chats = new BoardDatabase(join(directory, "chat.sqlite"));
-  board = new BoardStore(chats.db);
+  database = createTestDatabase();
+  await database.migrate();
+  board = new BoardStore(database);
+  await board.initialize();
   const task: Task = {
     id: "source-card",
     title: "Imported task",
@@ -73,62 +73,60 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  chats.close();
-  rmSync(directory, { recursive: true, force: true });
+  return database.close().then(() => {
+    rmSync(directory, { recursive: true, force: true });
+  });
 });
 
-const importFixture = () => {
+const importFixture = async () => {
   writeFileSync(join(directory, "board.json"), JSON.stringify(bundle));
-  return importBoard(board, directory);
+  return await importBoard(board, directory);
 };
 
-it("preserves source identities, archive, metadata, history and bytes across restart using only the board database", () => {
-  expect(importFixture()).toMatchObject({
+it("preserves task identities, archive, metadata, history and attachment bytes", async () => {
+  expect(await importFixture()).toMatchObject({
     cards: 1,
     tags: 1,
     events: 1,
     files: 1,
     unavailableFiles: 1,
   });
-  chats.close();
-  chats = new BoardDatabase(join(directory, "chat.sqlite"));
-  board = new BoardStore(chats.db);
-  expect(board.get("source-card")).toEqual(bundle.cards[0]);
-  expect(board.events("source-card")).toEqual(bundle.events);
-  expect(
-    Buffer.from(chats.db.prepare("SELECT bytes FROM task_files").get()!.bytes as Uint8Array),
-  ).toEqual(bytes);
-  expect(
-    chats.db
-      .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'chats'")
-      .get(),
-  ).toBeUndefined();
-  const updated = board.update(
+  const reloadedBoard = new BoardStore(database);
+  expect(await reloadedBoard.get("source-card")).toEqual(bundle.cards[0]);
+  expect(await reloadedBoard.events("source-card")).toEqual(bundle.events);
+  const storedFile = await database.query<{ encoded: string }>(
+    "SELECT encode(bytes, 'hex') AS encoded FROM task_files",
+  );
+  expect(Buffer.from(storedFile[0]!.encoded, "hex")).toEqual(bytes);
+  const updated = await reloadedBoard.update(
     "source-card",
     { revision: 1, title: "Edited after import" },
     "Administrator",
   );
-  expect(importFixture()).toMatchObject({ alreadyImported: true });
-  expect(board.get("source-card")).toEqual(updated);
+  expect(await importFixture()).toMatchObject({ alreadyImported: true });
+  expect(await reloadedBoard.get("source-card")).toEqual(updated);
   bundle.cards[0]!.title = "Changed source";
-  expect(importFixture).toThrow("already imported");
+  await expect(importFixture()).rejects.toThrow("already imported");
 });
 
-it("rolls back the complete import on corrupted bytes or inconsistent references", () => {
+it("rolls back the complete import on corrupted bytes or inconsistent references", async () => {
   writeFileSync(join(directory, "files", hash), "corrupted");
-  expect(importFixture).toThrow("integrity");
-  expect(board.snapshot()).toMatchObject({ cards: [], tags: [], dividers: [] });
-  expect(chats.db.prepare("SELECT count(*) AS count FROM task_imports").get()?.count).toBe(0);
+  await expect(importFixture()).rejects.toThrow("integrity");
+  expect(await board.snapshot()).toMatchObject({ cards: [], tags: [], dividers: [] });
+  const imports = await database.query<{ count: number }>(
+    "SELECT count(*)::int AS count FROM task_imports",
+  );
+  expect(imports[0]?.count).toBe(0);
   writeFileSync(join(directory, "files", hash), bytes);
   bundle.events[0]!.cardId = "unknown-card";
-  expect(importFixture).toThrow("unknown task");
-  expect(board.cards()).toHaveLength(0);
+  await expect(importFixture()).rejects.toThrow("unknown task");
+  expect(await board.cards()).toHaveLength(0);
 });
 
-it("requires an explicit record for every unavailable attachment and refuses populated destinations", () => {
+it("requires explicit records for unavailable attachments and refuses populated destinations", async () => {
   bundle.unavailableFiles = [];
-  expect(importFixture).toThrow("explicitly accounted");
-  board.create(
+  await expect(importFixture()).rejects.toThrow("explicitly accounted");
+  await board.create(
     {
       title: "Existing task",
       description: null,
@@ -138,6 +136,6 @@ it("requires an explicit record for every unavailable attachment and refuses pop
     },
     "Admin",
   );
-  expect(importFixture).toThrow("empty board");
-  expect(board.cards()).toHaveLength(1);
+  await expect(importFixture()).rejects.toThrow("empty board");
+  expect(await board.cards()).toHaveLength(1);
 });

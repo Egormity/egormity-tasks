@@ -1,91 +1,81 @@
-import { DatabaseSync } from "node:sqlite";
 import { expect, it } from "vitest";
 
+import { createTestDatabase } from "../test-support/database.js";
 import { hashPassword, UserStore } from "./user-store.js";
 
-const createStore = () => {
-  const db = new DatabaseSync(":memory:");
-  const store = new UserStore(
-    db,
-    { id: "00000000-0000-5000-8000-000000000001", username: "admin", role: "admin" },
-    hashPassword("bootstrap-password"),
-  );
+const admin = {
+  id: "00000000-0000-5000-8000-000000000001",
+  username: "admin",
+  role: "admin" as const,
+};
+
+const createStore = async () => {
+  const db = createTestDatabase();
+  await db.migrate();
+  const store = new UserStore(db);
+  await store.ensureBootstrapAdmin(admin, hashPassword("bootstrap-password"), "Admin");
   return { db, store };
 };
 
-it("adds username to legacy account tables without losing sign-in details", () => {
-  const db = new DatabaseSync(":memory:");
-  db.exec(`
-    CREATE TABLE app_users (
-      id TEXT PRIMARY KEY,
-      name TEXT NOT NULL,
-      email TEXT NOT NULL COLLATE NOCASE UNIQUE,
-      role TEXT NOT NULL CHECK (role IN ('admin', 'manager')),
-      passwordHash TEXT NOT NULL,
-      sessionVersion INTEGER NOT NULL DEFAULT 0,
-      updatedAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-    );
-  `);
+it("preserves existing sign-in details and exposes only public account fields", async () => {
+  const { db, store } = await createStore();
   const passwordHash = hashPassword("existing-account-password");
-  db.prepare(
-    "INSERT INTO app_users (id, name, email, role, passwordHash) VALUES (?, ?, ?, ?, ?)",
-  ).run(
-    "11111111-1111-4111-8111-111111111111",
-    "Existing account",
-    "old@example.test",
-    "manager",
-    passwordHash,
+  await db.query(
+    `INSERT INTO app_users
+      (id, name, email, role, password_hash, session_version, username)
+     VALUES ($1, $2, $3, $4, $5, 0, $3)`,
+    [
+      "11111111-1111-4111-8111-111111111111",
+      "Existing account",
+      "old@example.test",
+      "manager",
+      passwordHash,
+    ],
   );
 
-  const store = new UserStore(
-    db,
-    { id: "00000000-0000-5000-8000-000000000001", username: "admin", role: "admin" },
-    hashPassword("bootstrap-password"),
-  );
-
-  expect(store.findByUsername("old@example.test")).toMatchObject({
+  expect(await store.findByUsername("OLD@example.test")).toMatchObject({
     id: "11111111-1111-4111-8111-111111111111",
     username: "old@example.test",
     role: "manager",
     passwordHash,
   });
-  expect(store.list().map(({ username }) => username)).toEqual(["admin", "old@example.test"]);
-  expect(store.list()[0]).not.toHaveProperty("passwordHash");
-  db.close();
+  const users = await store.list();
+  expect(users.map(({ username }) => username)).toEqual(["admin", "old@example.test"]);
+  expect(users[0]).not.toHaveProperty("passwordHash");
+  await db.close();
 });
 
-it("removes an account and reports it as missing afterwards", () => {
-  const { db, store } = createStore();
-  const manager = store.create({
+it("removes an account and reports it as missing afterwards", async () => {
+  const { db, store } = await createStore();
+  const manager = await store.create({
     username: "manager",
     role: "manager",
     password: "manager-password",
   });
 
-  expect(store.remove(manager.id, "00000000-0000-5000-8000-000000000001")).toEqual(manager);
-  expect(store.findById(manager.id)).toBeNull();
-  expect(store.list().map(({ username }) => username)).toEqual(["admin"]);
-  db.close();
+  expect(await store.remove(manager.id, admin.id)).toEqual(manager);
+  expect(await store.findById(manager.id)).toBeNull();
+  expect((await store.list()).map(({ username }) => username)).toEqual(["admin"]);
+  await db.close();
 });
 
-it("refuses to remove the signed-in account, the last admin, or an unknown account", () => {
-  const { db, store } = createStore();
-  const adminId = "00000000-0000-5000-8000-000000000001";
-  const manager = store.create({
+it("refuses to remove the signed-in account, the last admin, or an unknown account", async () => {
+  const { db, store } = await createStore();
+  const manager = await store.create({
     username: "manager",
     role: "manager",
     password: "manager-password",
   });
 
-  expect(() => store.remove(adminId, adminId)).toThrowError(
+  await expect(store.remove(admin.id, admin.id)).rejects.toThrow(
     "You cannot delete your own account.",
   );
-  expect(() => store.remove(adminId, manager.id)).toThrowError(
+  await expect(store.remove(admin.id, manager.id)).rejects.toThrow(
     "At least one admin account must remain.",
   );
-  expect(() => store.remove("11111111-1111-4111-8111-111111111111", adminId)).toThrowError(
+  await expect(store.remove("11111111-1111-4111-8111-111111111111", admin.id)).rejects.toThrow(
     "User not found.",
   );
-  expect(store.list()).toHaveLength(2);
-  db.close();
+  expect(await store.list()).toHaveLength(2);
+  await db.close();
 });

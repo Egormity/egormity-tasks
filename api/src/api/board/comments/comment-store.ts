@@ -1,46 +1,39 @@
-import type { BoardStore } from "../board-store.js";
 import type { TaskAttachment } from "../../contracts/board.js";
 import type { TaskComment } from "../../contracts/task-comments.js";
-import { HttpError } from "../../auth/auth.js";
+import { PostgresDatabase } from "../../database/database.js";
+import { HttpError } from "../../http-error.js";
+import { BoardRepository } from "../board-repository.js";
+import type { BoardStore } from "../board-store.js";
 
 export class CommentStore {
-  constructor(private readonly board: BoardStore) {
-    board.db.exec(`
-      CREATE TABLE IF NOT EXISTS task_comments (
-        id TEXT PRIMARY KEY, cardId TEXT NOT NULL REFERENCES task_cards(id), data TEXT NOT NULL
-      );
-      CREATE INDEX IF NOT EXISTS task_comments_card ON task_comments(cardId);
-    `);
-  }
+  constructor(
+    private readonly db: PostgresDatabase,
+    private readonly board: BoardStore,
+  ) {}
 
-  list = (cardId: string): TaskComment[] => {
-    this.board.get(cardId);
-    return this.board.db
-      .prepare("SELECT data FROM task_comments WHERE cardId = ? ORDER BY rowid")
-      .all(cardId)
-      .map((row) => JSON.parse(String(row.data)) as TaskComment);
+  list = async (cardId: string): Promise<TaskComment[]> => {
+    await this.board.get(cardId);
+    return this.board.listComments(cardId);
   };
 
   add = (
     input: Omit<TaskComment, "createdAt" | "attachments">,
     files: { attachment: TaskAttachment; bytes: Buffer }[],
   ) =>
-    this.board.transaction(() => {
-      const card = this.board.get(input.cardId);
+    this.db.transaction(async (executor) => {
+      const repository = new BoardRepository(executor);
+      const card = await this.board.get(input.cardId, executor);
       const attachments = files.map((file) => file.attachment);
-      const previous = this.board.db
-        .prepare("SELECT data FROM task_comments WHERE id = ?")
-        .get(input.id);
+      const previous = await repository.comment(input.id);
       if (previous) {
-        const comment = JSON.parse(String(previous.data)) as TaskComment;
         if (
-          comment.cardId !== input.cardId ||
-          comment.author.id !== input.author.id ||
-          comment.text !== input.text ||
-          JSON.stringify(comment.attachments) !== JSON.stringify(attachments)
+          previous.cardId !== input.cardId ||
+          previous.author.id !== input.author.id ||
+          previous.text !== input.text ||
+          JSON.stringify(previous.attachments) !== JSON.stringify(attachments)
         )
           throw new HttpError(409, "This comment request was already used.");
-        return comment;
+        return previous;
       }
       const comment: TaskComment = {
         ...input,
@@ -48,17 +41,18 @@ export class CommentStore {
         createdAt: new Date().toISOString(),
       };
       for (const file of files)
-        this.board.db
-          .prepare("INSERT OR IGNORE INTO task_files VALUES (?, ?)")
-          .run(file.attachment.sha256!, file.bytes);
-      this.board.db
-        .prepare("INSERT INTO task_comments VALUES (?, ?, ?)")
-        .run(comment.id, comment.cardId, JSON.stringify(comment));
-      this.board.save({ ...card, revision: card.revision + 1, updatedAt: comment.createdAt });
-      this.board.event(card.id, "comment_added", {
-        actor: comment.author.name,
-        commentId: comment.id,
-      });
+        await repository.insertFile(file.attachment.sha256!, file.bytes);
+      await repository.insertComment(comment);
+      await this.board.save(
+        { ...card, revision: card.revision + 1, updatedAt: comment.createdAt },
+        executor,
+      );
+      await this.board.event(
+        card.id,
+        "comment_added",
+        { actor: comment.author.name, commentId: comment.id },
+        executor,
+      );
       return comment;
     });
 }

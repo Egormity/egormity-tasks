@@ -37,74 +37,82 @@ export const boardRoutes = (store: BoardStore, events: BoardEvents) => {
     })
     .strict();
   router.get("/events", events.subscribe);
-  router.get("/", (_request, response) =>
-    response.json({ ...store.snapshot(), version: events.version }),
+  router.get("/", async (_request, response) =>
+    response.json({ ...(await store.snapshot()), version: events.version }),
   );
-  router.post("/columns", (request, response) => {
+  router.post("/columns", async (request, response) => {
     const input = parse(columnInputSchema, request.body);
-    response.status(201).json(changed(store.createColumn(input)));
+    response.status(201).json(changed(await store.layout.createColumn(input)));
   });
-  router.post("/columns/order", (request, response) => {
+  router.post("/columns/order", async (request, response) => {
     const { ids } = parse(
       z.object({ ids: z.array(z.string().min(1).max(160)) }).strict(),
       request.body,
     );
-    response.json(changed(store.reorderColumns(ids)));
+    response.json(changed(await store.layout.reorderColumns(ids)));
   });
-  router.post("/columns/:id", (request, response) => {
+  router.post("/columns/:id", async (request, response) => {
     const input = parse(columnInputSchema, request.body);
-    response.json(changed(store.updateColumn(request.params.id, input)));
+    response.json(changed(await store.layout.updateColumn(request.params.id, input)));
   });
-  router.post("/columns/:id/remove", (request, response) =>
-    response.json(changed(store.deleteColumn(request.params.id))),
+  router.post("/columns/:id/remove", async (request, response) =>
+    response.json(changed(await store.layout.deleteColumn(request.params.id))),
   );
-  router.post("/dividers", (request, response) =>
+  router.post("/dividers", async (request, response) =>
     response
       .status(201)
-      .json(changed(store.addDivider(parse(boardDividerInputSchema, request.body)))),
+      .json(
+        changed(await store.layout.addDivider(parse(boardDividerInputSchema, request.body))),
+      ),
   );
-  router.post("/dividers/:id", (request, response) => {
+  router.post("/dividers/:id", async (request, response) => {
     const { title } = parse(
       boardDividerInputSchema.pick({ title: true }).strict(),
       request.body,
     );
-    response.json(changed(store.updateDivider(request.params.id, title)));
+    response.json(changed(await store.layout.updateDivider(request.params.id, title)));
   });
-  router.post("/dividers/:id/remove", (request, response) =>
-    response.json(changed(store.deleteDivider(request.params.id))),
+  router.post("/dividers/:id/remove", async (request, response) =>
+    response.json(changed(await store.layout.deleteDivider(request.params.id))),
   );
-  router.post("/cards", (request, response) =>
+  router.post("/cards", async (request, response) =>
     response
       .status(201)
-      .json(changed(store.create(parse(taskInputSchema, request.body), actor(response)))),
+      .json(changed(await store.create(parse(taskInputSchema, request.body), actor(response)))),
   );
-  router.post("/cards/:id", (request, response) =>
+  router.post("/cards/:id", async (request, response) =>
     response.json(
       changed(
-        store.update(request.params.id, parse(taskUpdateSchema, request.body), actor(response)),
+        await store.update(
+          request.params.id,
+          parse(taskUpdateSchema, request.body),
+          actor(response),
+        ),
       ),
     ),
   );
-  router.get("/cards/:id/events", (request, response) =>
-    response.json(store.events(request.params.id)),
+  router.get("/cards/:id/events", async (request, response) =>
+    response.json(await store.events(request.params.id)),
   );
-  router.post("/tags", (request, response) =>
-    response.status(201).json(changed(store.saveTag(parse(tagInputSchema, request.body)))),
+  router.post("/tags", async (request, response) =>
+    response
+      .status(201)
+      .json(changed(await store.saveTag(parse(tagInputSchema, request.body)))),
   );
-  router.post("/tags/:id", (request, response) => {
-    if (!store.tags().some((tag) => tag.id === request.params.id))
+  router.post("/tags/:id", async (request, response) => {
+    if (!(await store.tags()).some((tag) => tag.id === request.params.id))
       throw new HttpError(404, "Tag not found.");
     response.json(
-      changed(store.saveTag(parse(tagInputSchema, request.body), request.params.id)),
+      changed(await store.saveTag(parse(tagInputSchema, request.body), request.params.id)),
     );
   });
-  router.post("/tags/:id/remove", (request, response) =>
-    response.json(changed(store.deleteTag(request.params.id, actor(response)))),
+  router.post("/tags/:id/remove", async (request, response) =>
+    response.json(changed(await store.deleteTag(request.params.id, actor(response)))),
   );
   router.post(
     "/cards/:id/attachments",
     raw({ type: "application/octet-stream", limit: policy.attachmentMaxBytes }),
-    (request, response) => {
+    async (request, response) => {
       const revision = parse(
         z.coerce.number().int().positive(),
         request.headers["x-task-revision"],
@@ -128,7 +136,7 @@ export const boardRoutes = (store: BoardStore, events: BoardEvents) => {
         .status(201)
         .json(
           changed(
-            store.attach(
+            await store.attach(
               request.params.id,
               revision,
               attachment,
@@ -139,29 +147,36 @@ export const boardRoutes = (store: BoardStore, events: BoardEvents) => {
         );
     },
   );
-  router.get("/cards/:id/attachments/:attachmentId", (request, response) => {
+  router.get("/cards/:id/attachments/:attachmentId", async (request, response) => {
+    const [card, comments] = await Promise.all([
+      store.get(request.params.id),
+      store.comments.list(request.params.id),
+    ]);
     const attachment = [
-      ...store.get(request.params.id).attachments,
-      ...store.comments.list(request.params.id).flatMap((comment) => comment.attachments),
-    ].find((a) => a.id === request.params.attachmentId);
-    const file = attachment?.sha256
-      ? store.db.prepare("SELECT bytes FROM task_files WHERE sha256 = ?").get(attachment.sha256)
-      : undefined;
+      ...card.attachments,
+      ...comments.flatMap((comment) => comment.attachments),
+    ].find((item) => item.id === request.params.attachmentId);
+    const file = attachment?.sha256 ? await store.getFile(attachment.sha256) : undefined;
     if (!attachment || !file) throw new HttpError(404, "Attachment file is unavailable.");
     response.setHeader(
       "Content-Disposition",
       `attachment; filename*=UTF-8''${encodeURIComponent(attachment.name).replace(/'/gu, "%27")}`,
     );
-    response.type("application/octet-stream").send(Buffer.from(file.bytes as Uint8Array));
+    response.type("application/octet-stream").send(file);
   });
-  router.post("/cards/:id/attachments/:attachmentId/remove", (request, response) => {
+  router.post("/cards/:id/attachments/:attachmentId/remove", async (request, response) => {
     const { revision } = parse(
       z.object({ revision: z.number().int().positive() }).strict(),
       request.body,
     );
     response.json(
       changed(
-        store.detach(request.params.id, revision, request.params.attachmentId, actor(response)),
+        await store.detach(
+          request.params.id,
+          revision,
+          request.params.attachmentId,
+          actor(response),
+        ),
       ),
     );
   });

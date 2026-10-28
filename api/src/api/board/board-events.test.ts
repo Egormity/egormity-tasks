@@ -7,12 +7,13 @@ import { parseInternalTasksEnvironment } from "../config.js";
 import type { LiveBoardSnapshot, Task, TaskTag } from "../contracts/board.js";
 import type { TaskComment } from "../contracts/task-comments.js";
 import { createHash, randomUUID } from "node:crypto";
-import { BoardDatabase } from "./database.js";
+import type { PostgresDatabase } from "../database/database.js";
+import { createTestDatabase } from "../test-support/database.js";
 import { localAdminCookieToken, localAuthTestEnvironment } from "../auth/test-support.js";
 
 let servers: Server[];
-let application: ReturnType<typeof createApplication>;
-let database: BoardDatabase;
+let application: Awaited<ReturnType<typeof createApplication>>;
+let database: PostgresDatabase;
 let base: string;
 const origin = "https://tasks.example.test";
 let cookie: string;
@@ -78,20 +79,20 @@ const connect = async () => {
 
 beforeEach(async () => {
   servers = [];
-  database = new BoardDatabase(":memory:");
+  database = createTestDatabase();
   const config = parseInternalTasksEnvironment({
     ...localAuthTestEnvironment,
     OPERATIONS_AGENT_PUBLIC_URL: origin,
   });
   cookie = `amazi_operations_session=${localAdminCookieToken(config)}`;
-  application = createApplication(config, database);
+  application = await createApplication(config, database);
   base = await listen(application.app);
 });
 
 afterEach(async () => {
   for (const controller of controllers.splice(0)) controller.abort();
-  await application.close();
-  database.close();
+  await application?.close();
+  await database.close();
   vi.useRealTimers();
   for (const server of servers) {
     server.closeAllConnections();

@@ -5,25 +5,27 @@ import { join } from "node:path";
 import { boardImportSchema } from "../contracts/board.js";
 
 import type { BoardStore } from "./board-store.js";
+import { BoardRepository } from "./board-repository.js";
 
-export const importBoard = (store: BoardStore, directory: string) => {
+export const importBoard = async (store: BoardStore, directory: string) => {
   const raw = readFileSync(join(directory, "board.json"));
   const data = boardImportSchema.parse(JSON.parse(raw.toString("utf8")));
   const digest = createHash("sha256").update(raw).digest("hex");
-  const previous = store.db
-    .prepare("SELECT digest, data FROM task_imports WHERE source = ?")
-    .get(data.sourceProjectId);
-  if (previous) {
-    if (previous.digest !== digest)
+  const previous = await store.db.query<{ digest: string; data: string }>(
+    "SELECT digest, data FROM task_imports WHERE source = $1",
+    [data.sourceProjectId],
+  );
+  if (previous.length) {
+    if (previous[0]!.digest !== digest)
       throw new Error(
         "This source was already imported with different content. Refusing to overwrite tasks.",
       );
     return {
-      ...(JSON.parse(String(previous.data)) as Record<string, unknown>),
+      ...(JSON.parse(previous[0]!.data) as Record<string, unknown>),
       alreadyImported: true,
     };
   }
-  if (store.cards().length || store.tags().length)
+  if ((await store.cards()).length || (await store.tags()).length)
     throw new Error("Initial board import requires an empty board.");
   const cards = new Map(data.cards.map((card) => [card.id, card]));
   const tags = new Set(data.tags.map((tag) => tag.id));
@@ -68,23 +70,24 @@ export const importBoard = (store: BoardStore, directory: string) => {
     unavailableFiles: unavailable.size,
     alreadyImported: false,
   };
-  return store.transaction(() => {
+  return store.db.transaction(async (executor) => {
+    const repository = new BoardRepository(executor);
     for (const [hash, size] of files) {
       const bytes = readFileSync(join(directory, "files", hash));
       if (bytes.length !== size || createHash("sha256").update(bytes).digest("hex") !== hash)
         throw new Error("Attachment integrity check failed.");
-      store.db.prepare("INSERT INTO task_files VALUES (?, ?)").run(hash, bytes);
+      await repository.insertFile(hash, bytes);
     }
-    for (const tag of data.tags) store.saveTag(tag, tag.id);
+    for (const tag of data.tags) await repository.saveTag(tag);
     for (const card of data.cards) {
-      store.validateTags(card.tagIds);
-      store.save(card);
+      await store.validateTags(card.tagIds, repository);
+      await repository.saveCard(card);
     }
-    const event = store.db.prepare("INSERT INTO task_events VALUES (?, ?, ?)");
-    for (const value of data.events) event.run(value.id, value.cardId, JSON.stringify(value));
-    store.db
-      .prepare("INSERT INTO task_imports VALUES (?, ?, ?)")
-      .run(data.sourceProjectId, digest, JSON.stringify(summary));
+    for (const event of data.events) await repository.event(event);
+    await executor.query(
+      "INSERT INTO task_imports (source, digest, data) VALUES ($1, $2, $3)",
+      [data.sourceProjectId, digest, JSON.stringify(summary)],
+    );
     return summary;
   });
 };
