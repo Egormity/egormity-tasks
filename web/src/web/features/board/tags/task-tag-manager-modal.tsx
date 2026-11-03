@@ -15,6 +15,12 @@ import type { TrackerTag, TrackerTagUpdate } from "@/features/board/data/tracker
 
 import { boardText } from "@/features/board/i18n/board-copy";
 import { TaskTagColorPicker } from "./task-tag-ui";
+import { TaskTagPreview } from "./task-tag-preview";
+
+type TagDraft = {
+  readonly name?: string | undefined;
+  readonly tone?: TaskTagTone | undefined;
+};
 
 type TaskTagManagerModalProps = {
   readonly onCreateTag: (name: string, tone: TaskTagTone) => Promise<TrackerTag | undefined>;
@@ -38,10 +44,37 @@ export const TaskTagManagerModal = ({
 }: TaskTagManagerModalProps) => {
   const [newTagName, setNewTagName] = useState("");
   const [newTagTone, setNewTagTone] = useState<TaskTagTone>("green");
-  const [draftNames, setDraftNames] = useState<Record<string, string>>({});
+  const [drafts, setDrafts] = useState<Readonly<Record<string, TagDraft>>>({});
   const [isCreating, setIsCreating] = useState(false);
-  const [updatingTagId, setUpdatingTagId] = useState<string | null>(null);
-  const [nameErrorTagId, setNameErrorTagId] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+
+  const draftFor = (tag: TrackerTag) => ({
+    name: drafts[tag.id]?.name ?? tag.name,
+    tone: drafts[tag.id]?.tone ?? tag.tone,
+  });
+
+  const isChanged = (tag: TrackerTag) => {
+    const draft = draftFor(tag);
+    return draft.name.trim() !== tag.name || draft.tone !== tag.tone;
+  };
+
+  const changedTags = tags.filter(isChanged);
+  const hasEmptyName = changedTags.some((tag) => !draftFor(tag).name.trim());
+
+  const updateDraft = (tag: TrackerTag, patch: TagDraft) => {
+    setDrafts((current) => ({
+      ...current,
+      [tag.id]: { ...current[tag.id], ...patch },
+    }));
+  };
+
+  const clearDraft = (id: string) => {
+    setDrafts((current) => {
+      const next = { ...current };
+      delete next[id];
+      return next;
+    });
+  };
 
   const createTag = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -57,39 +90,32 @@ export const TaskTagManagerModal = ({
     }
   };
 
-  const updateTone = async (tag: TrackerTag, tone: TaskTagTone) => {
-    if (tag.tone === tone || updatingTagId) return;
+  const saveChanges = async () => {
+    if (isSaving || changedTags.length === 0 || hasEmptyName) return;
 
-    setUpdatingTagId(tag.id);
+    setIsSaving(true);
+    let allSaved = true;
     try {
-      await onUpdateTag(tag.id, { tone });
+      for (const tag of changedTags) {
+        const draft = draftFor(tag);
+        const name = draft.name.trim();
+        const input: TrackerTagUpdate = {
+          ...(name !== tag.name ? { name } : {}),
+          ...(draft.tone !== tag.tone ? { tone: draft.tone } : {}),
+        };
+        const updated = await onUpdateTag(tag.id, input);
+        if (updated) clearDraft(tag.id);
+        else allSaved = false;
+      }
     } finally {
-      setUpdatingTagId(null);
+      setIsSaving(false);
     }
-  };
 
-  const updateName = async (tag: TrackerTag) => {
-    const name = (draftNames[tag.id] ?? tag.name).trim();
-    if (!name) {
-      setNameErrorTagId(tag.id);
-      return;
-    }
-    if (name === tag.name || updatingTagId) return;
-
-    setUpdatingTagId(tag.id);
-    try {
-      const updated = await onUpdateTag(tag.id, { name });
-      if (updated) setDraftNames((current) => ({ ...current, [tag.id]: updated.name }));
-    } finally {
-      setUpdatingTagId(null);
-    }
+    if (allSaved) handleOpenChange(false);
   };
 
   const handleOpenChange = (nextOpen: boolean) => {
-    if (!nextOpen) {
-      setDraftNames({});
-      setNameErrorTagId(null);
-    }
+    if (!nextOpen) setDrafts({});
     onOpenChange(nextOpen);
   };
 
@@ -142,13 +168,13 @@ export const TaskTagManagerModal = ({
           {tags.length > 0 ? (
             <div className="space-y-1.5">
               {tags.map((tag) => {
-                const draftName = draftNames[tag.id] ?? tag.name;
-                const hasNameChanges = draftName.trim() !== tag.name;
-                const isUpdating = updatingTagId === tag.id;
+                const draft = draftFor(tag);
+                const changed = isChanged(tag);
+                const nameEmpty = !draft.name.trim();
 
                 return (
                   <div
-                    className="border-board-modal-border bg-board-surface rounded-lg border p-2"
+                    className={`bg-board-surface rounded-lg border p-2 ${changed ? "border-board-accent-border" : "border-board-modal-border"}`}
                     key={tag.id}
                   >
                     <div className="flex flex-wrap items-center gap-2">
@@ -157,59 +183,34 @@ export const TaskTagManagerModal = ({
                           {boardText("Название")}
                         </label>
                         <input
-                          aria-invalid={nameErrorTagId === tag.id}
+                          aria-invalid={nameEmpty}
                           className="border-board-input-border bg-board-surface text-board-input-text placeholder:text-board-placeholder focus:border-board-accent focus:ring-board-accent/15 aria-[invalid=true]:border-board-rose h-8 w-full rounded-md border px-2.5 text-xs transition outline-none focus:ring-2"
+                          disabled={isSaving}
                           id={`managed-tag-name-${tag.id}`}
-                          onChange={(event) => {
-                            setDraftNames((current) => ({
-                              ...current,
-                              [tag.id]: event.target.value,
-                            }));
-                            if (nameErrorTagId === tag.id) setNameErrorTagId(null);
-                          }}
-                          value={draftName}
+                          onChange={(event) => updateDraft(tag, { name: event.target.value })}
+                          value={draft.name}
                         />
-                        {nameErrorTagId === tag.id && (
+                        {nameEmpty && (
                           <p className="text-board-rose mt-1 text-xs">
                             {boardText("Введите название тега.")}
                           </p>
                         )}
+                        <div className="mt-1.5">
+                          <TaskTagPreview name={draft.name} tone={draft.tone} />
+                        </div>
                       </div>
                       <div className="ml-auto flex items-center gap-1">
-                        <div className="flex items-center gap-1">
-                          <TaskTagColorPicker
-                            compact
-                            disabled={updatingTagId !== null}
-                            label={boardText("Цвет тега {0}", tag.name)}
-                            onChange={(tone) => void updateTone(tag, tone)}
-                            value={tag.tone}
-                          />
-                          {isUpdating && (
-                            <LoaderCircle
-                              aria-label={boardText("Сохранение цвета тега")}
-                              className="text-board-accent size-3.5 animate-spin"
-                            />
-                          )}
-                        </div>
-                        <button
-                          aria-label={boardText("Сохранить тег {0}", tag.name)}
-                          className="text-board-accent hover:bg-board-selected focus-visible:ring-board-accent grid size-7 shrink-0 place-items-center rounded-md transition focus-visible:ring-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-40"
-                          disabled={!hasNameChanges || isUpdating || updatingTagId !== null}
-                          onClick={() => void updateName(tag)}
-                          type="button"
-                        >
-                          {isUpdating ? (
-                            <LoaderCircle
-                              aria-hidden="true"
-                              className="size-3.5 animate-spin"
-                            />
-                          ) : (
-                            <Save aria-hidden="true" className="size-3.5" />
-                          )}
-                        </button>
+                        <TaskTagColorPicker
+                          compact
+                          disabled={isSaving}
+                          label={boardText("Цвет тега {0}", tag.name)}
+                          onChange={(tone) => updateDraft(tag, { tone })}
+                          value={draft.tone}
+                        />
                         <button
                           aria-label={boardText("Удалить тег {0}", tag.name)}
                           className="text-board-rose hover:bg-board-rose-surface hover:text-board-danger focus-visible:ring-board-accent grid size-7 shrink-0 place-items-center rounded-md transition focus-visible:ring-2 focus-visible:outline-none"
+                          disabled={isSaving}
                           onClick={() => {
                             onOpenChange(false);
                             onDeleteTag(tag);
@@ -245,6 +246,9 @@ export const TaskTagManagerModal = ({
                 {boardText("Новый тег")}
               </h3>
             </div>
+            <div className="mb-2">
+              <TaskTagPreview name={newTagName} tone={newTagTone} />
+            </div>
             <div className="flex flex-wrap items-center gap-2">
               <input
                 aria-label={boardText("Название нового тега")}
@@ -277,15 +281,28 @@ export const TaskTagManagerModal = ({
           </form>
         </div>
 
-        <ModalFooter className="border-board-section-border shrink-0 border-t px-4 py-3">
+        <ModalFooter className="border-board-section-border shrink-0 flex flex-col-reverse gap-2 border-t px-4 py-3 sm:flex-row sm:justify-end">
           <ModalClose asChild>
             <button
               className="bg-board-selected text-board-accent hover:bg-board-selected-hover focus-visible:ring-board-accent inline-flex min-h-8 w-full items-center justify-center rounded-md px-3 text-xs font-semibold transition focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none sm:w-auto"
               type="button"
             >
-              {boardText("Готово")}
+              {boardText("Отмена")}
             </button>
           </ModalClose>
+          <button
+            className="bg-board-accent text-board-on-accent hover:bg-board-accent-hover focus-visible:ring-board-accent shadow-board-button inline-flex min-h-8 w-full items-center justify-center gap-1.5 rounded-md px-3 text-xs font-semibold transition focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+            disabled={changedTags.length === 0 || hasEmptyName || isSaving}
+            onClick={() => void saveChanges()}
+            type="button"
+          >
+            {isSaving ? (
+              <LoaderCircle aria-hidden="true" className="size-3.5 animate-spin" />
+            ) : (
+              <Save aria-hidden="true" className="size-3.5" />
+            )}
+            {boardText("Сохранить изменения")}
+          </button>
         </ModalFooter>
       </ModalContent>
     </Modal>

@@ -230,6 +230,7 @@ export const boardEnglish: Readonly<Record<string, string>> = {
   "Новый тег": "New tag",
   "Название нового тега": "New tag name",
   "Например, Важно": "For example, Important",
+  Предпросмотр: "Preview",
   "Цвет нового тега": "New tag color",
   "Создать тег": "Create tag",
   "Поиск задач": "Search tasks",
