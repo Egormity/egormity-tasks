@@ -33,7 +33,8 @@ import {
 import { TaskEditorTags } from "@/features/board/tags/task-editor-tags";
 import { TaskTagChips } from "@/features/board/tags/task-tag-chips";
 import { TaskTagManagerModal } from "@/features/board/tags/task-tag-manager-modal";
-import type { TrackerTag, TrackerTagUpdate } from "@/features/board/data/tracker-api";
+import type { TrackerTag } from "@/features/board/data/tracker-api";
+import type { TagBatchUpdate } from "@contracts/board.js";
 
 import { boardText } from "@/features/board/i18n/board-copy";
 import { TaskActivity } from "../activity/TaskActivity";
@@ -61,10 +62,7 @@ type TaskEditorModalProps = {
   readonly onExport?: (() => void) | undefined;
   readonly isExporting?: boolean | undefined;
   readonly onRequestEdit?: (() => void) | undefined;
-  readonly onUpdateTag: (
-    id: string,
-    input: TrackerTagUpdate,
-  ) => Promise<TrackerTag | undefined>;
+  readonly onUpdateTags: (tags: readonly TagBatchUpdate[]) => Promise<boolean>;
   readonly open: boolean;
   readonly events: readonly TrackerEvent[];
   readonly tags: readonly TrackerTag[];
@@ -85,7 +83,7 @@ export const TaskEditorModal = ({
   onOpenChange,
   onSave,
   onRequestEdit,
-  onUpdateTag,
+  onUpdateTags,
   open,
   isArchiving = false,
   isExporting = false,
@@ -499,7 +497,7 @@ export const TaskEditorModal = ({
         onCreateTag={onCreateTag}
         onDeleteTag={onDeleteTag}
         onOpenChange={setTagManagerOpen}
-        onUpdateTag={onUpdateTag}
+        onUpdateTags={onUpdateTags}
         open={tagManagerOpen}
         tags={tags}
       />

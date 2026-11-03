@@ -11,7 +11,8 @@ import {
   ModalTitle,
 } from "@/features/board/components/modal";
 import type { TaskTagTone } from "@/features/board/data/task-data";
-import type { TrackerTag, TrackerTagUpdate } from "@/features/board/data/tracker-api";
+import type { TrackerTag } from "@/features/board/data/tracker-api";
+import type { TagBatchUpdate } from "@contracts/board.js";
 
 import { boardText } from "@/features/board/i18n/board-copy";
 import { TaskTagColorPicker } from "./task-tag-ui";
@@ -26,10 +27,7 @@ type TaskTagManagerModalProps = {
   readonly onCreateTag: (name: string, tone: TaskTagTone) => Promise<TrackerTag | undefined>;
   readonly onDeleteTag: (tag: TrackerTag) => void;
   readonly onOpenChange: (open: boolean) => void;
-  readonly onUpdateTag: (
-    id: string,
-    input: TrackerTagUpdate,
-  ) => Promise<TrackerTag | undefined>;
+  readonly onUpdateTags: (tags: readonly TagBatchUpdate[]) => Promise<boolean>;
   readonly open: boolean;
   readonly tags: readonly TrackerTag[];
 };
@@ -38,7 +36,7 @@ export const TaskTagManagerModal = ({
   onCreateTag,
   onDeleteTag,
   onOpenChange,
-  onUpdateTag,
+  onUpdateTags,
   open,
   tags,
 }: TaskTagManagerModalProps) => {
@@ -68,14 +66,6 @@ export const TaskTagManagerModal = ({
     }));
   };
 
-  const clearDraft = (id: string) => {
-    setDrafts((current) => {
-      const next = { ...current };
-      delete next[id];
-      return next;
-    });
-  };
-
   const createTag = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const name = newTagName.trim();
@@ -94,24 +84,20 @@ export const TaskTagManagerModal = ({
     if (isSaving || changedTags.length === 0 || hasEmptyName) return;
 
     setIsSaving(true);
-    let allSaved = true;
     try {
-      for (const tag of changedTags) {
+      const updates = changedTags.map((tag) => {
         const draft = draftFor(tag);
         const name = draft.name.trim();
-        const input: TrackerTagUpdate = {
+        return {
+          id: tag.id,
           ...(name !== tag.name ? { name } : {}),
           ...(draft.tone !== tag.tone ? { tone: draft.tone } : {}),
         };
-        const updated = await onUpdateTag(tag.id, input);
-        if (updated) clearDraft(tag.id);
-        else allSaved = false;
-      }
+      });
+      if (await onUpdateTags(updates)) handleOpenChange(false);
     } finally {
       setIsSaving(false);
     }
-
-    if (allSaved) handleOpenChange(false);
   };
 
   const handleOpenChange = (nextOpen: boolean) => {

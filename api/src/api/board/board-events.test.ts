@@ -294,3 +294,60 @@ it("rejects empty, unauthenticated, invalid and oversized comment uploads withou
       .status,
   ).toBe(201);
 });
+
+it("saves tag edits in one batch, preserving task assignments and rejecting invalid batches", async () => {
+  const first = (await (
+    await call("/tags", { name: "First", tone: "blue" })
+  ).json()) as TaskTag;
+  const second = (await (
+    await call("/tags", { name: "Second", tone: "green" })
+  ).json()) as TaskTag;
+  const task = (await (
+    await call("/cards", {
+      title: "Tagged",
+      description: null,
+      priority: "medium",
+      status: "backlog",
+      tagIds: [first.id, second.id],
+    })
+  ).json()) as Task;
+  const before = await snapshot();
+  const response = await call("/tags/batch", {
+    tags: [
+      { id: first.id, name: "Second", tone: "#ff6600" },
+      { id: second.id, name: "First" },
+    ],
+  });
+  expect(response.status).toBe(200);
+  expect(await response.json()).toEqual([
+    { id: first.id, name: "Second", tone: "#ff6600" },
+    { id: second.id, name: "First", tone: "green" },
+  ]);
+  const after = await snapshot();
+  expect(after.version).not.toBe(before.version);
+  expect(after.cards.find((card) => card.id === task.id)?.tagIds).toEqual([
+    first.id,
+    second.id,
+  ]);
+  for (const tags of [
+    [
+      { id: first.id, name: "Duplicate" },
+      { id: second.id, name: "Duplicate" },
+    ],
+    [
+      { id: first.id, tone: "rose" },
+      { id: "missing", name: "Missing" },
+    ],
+    [
+      { id: first.id, tone: "rose" },
+      { id: first.id, name: "Again" },
+    ],
+    [{ id: first.id, tone: "not-a-color" }],
+  ]) {
+    const invalid = await call("/tags/batch", { tags });
+    expect([400, 404, 409]).toContain(invalid.status);
+    const unchanged = await snapshot();
+    expect(unchanged.tags).toEqual(after.tags);
+    expect(unchanged.version).toBe(after.version);
+  }
+});

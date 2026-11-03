@@ -87,6 +87,8 @@ export const boardEnglish: Readonly<Record<string, string>> = {
   "Разделитель перемещен в «{0}»": "Divider moved to “{0}”",
   "Тег «{0}» создан": "Tag “{0}” created",
   "Не удалось создать тег": "Could not create the tag",
+  "Изменения тегов сохранены": "Tag changes saved",
+  "Не удалось сохранить изменения тегов": "Could not save tag changes",
   "Тег «{0}» изменён": "Tag “{0}” updated",
   "Цвет тега «{0}» изменён": "Color of tag “{0}” updated",
   "Не удалось изменить цвет тега": "Could not update the tag color",

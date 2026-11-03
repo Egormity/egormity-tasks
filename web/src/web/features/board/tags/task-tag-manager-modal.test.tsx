@@ -14,52 +14,90 @@ afterEach(() => {
 
 const renderModal = () => {
   document.documentElement.lang = "en";
-  const onUpdateTag = vi.fn().mockResolvedValue(tags[0]);
+  const onUpdateTags = vi.fn().mockResolvedValue(true);
   const onOpenChange = vi.fn();
   render(
     <TaskTagManagerModal
       onCreateTag={vi.fn()}
       onDeleteTag={vi.fn()}
       onOpenChange={onOpenChange}
-      onUpdateTag={onUpdateTag}
+      onUpdateTags={onUpdateTags}
       open
       tags={tags}
     />,
   );
-  return { onOpenChange, onUpdateTag };
+  return { onOpenChange, onUpdateTags };
 };
 
 it("keeps name edits as drafts until the footer save button is pressed", async () => {
-  const { onOpenChange, onUpdateTag } = renderModal();
+  const { onOpenChange, onUpdateTags } = renderModal();
   const saveButton = screen.getByRole<HTMLButtonElement>("button", { name: "Save changes" });
   expect(saveButton.disabled).toBe(true);
 
   fireEvent.change(screen.getByDisplayValue("Platform"), { target: { value: "Core" } });
-  expect(onUpdateTag).not.toHaveBeenCalled();
+  expect(onUpdateTags).not.toHaveBeenCalled();
   expect(saveButton.disabled).toBe(false);
 
   fireEvent.click(saveButton);
   await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));
-  expect(onUpdateTag).toHaveBeenCalledTimes(1);
-  expect(onUpdateTag).toHaveBeenCalledWith("tag", { name: "Core" });
+  expect(onUpdateTags).toHaveBeenCalledTimes(1);
+  expect(onUpdateTags).toHaveBeenCalledWith([{ id: "tag", name: "Core" }]);
 });
 
 it("saves a picked color only from the footer button", async () => {
-  const { onUpdateTag } = renderModal();
+  const { onUpdateTags } = renderModal();
   fireEvent.change(screen.getByLabelText("Color of tag Platform"), {
     target: { value: "#aabbcc" },
   });
-  expect(onUpdateTag).not.toHaveBeenCalled();
+  expect(onUpdateTags).not.toHaveBeenCalled();
 
   fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
-  await waitFor(() => expect(onUpdateTag).toHaveBeenCalledWith("tag", { tone: "#aabbcc" }));
+  await waitFor(() =>
+    expect(onUpdateTags).toHaveBeenCalledWith([{ id: "tag", tone: "#aabbcc" }]),
+  );
 });
 
 it("blocks saving when a tag name is empty", () => {
-  const { onUpdateTag } = renderModal();
+  const { onUpdateTags } = renderModal();
   fireEvent.change(screen.getByDisplayValue("Platform"), { target: { value: "  " } });
   expect(screen.getByRole<HTMLButtonElement>("button", { name: "Save changes" }).disabled).toBe(
     true,
   );
-  expect(onUpdateTag).not.toHaveBeenCalled();
+  expect(onUpdateTags).not.toHaveBeenCalled();
+});
+
+it("sends all edits together and keeps drafts available after a failed save", async () => {
+  document.documentElement.lang = "en";
+  const onUpdateTags = vi.fn().mockResolvedValueOnce(false).mockResolvedValueOnce(true);
+  const onOpenChange = vi.fn();
+  render(
+    <TaskTagManagerModal
+      onCreateTag={vi.fn()}
+      onDeleteTag={vi.fn()}
+      onOpenChange={onOpenChange}
+      onUpdateTags={onUpdateTags}
+      open
+      tags={[
+        { id: "first", name: "First", tone: "blue", usageCount: 0 },
+        { id: "second", name: "Second", tone: "green", usageCount: 1 },
+      ]}
+    />,
+  );
+  fireEvent.change(screen.getByDisplayValue("First"), { target: { value: "Renamed" } });
+  fireEvent.change(screen.getByLabelText("Color of tag Second"), {
+    target: { value: "#aabbcc" },
+  });
+  const save = screen.getByRole("button", { name: "Save changes" });
+  fireEvent.click(save);
+  await waitFor(() => expect(onUpdateTags).toHaveBeenCalledTimes(1));
+  expect(onUpdateTags).toHaveBeenCalledWith([
+    { id: "first", name: "Renamed" },
+    { id: "second", tone: "#aabbcc" },
+  ]);
+  expect(onOpenChange).not.toHaveBeenCalled();
+  expect(screen.getByDisplayValue("Renamed")).toBeTruthy();
+  await waitFor(() => expect((save as HTMLButtonElement).disabled).toBe(false));
+  fireEvent.click(save);
+  await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));
+  expect(onUpdateTags).toHaveBeenCalledTimes(2);
 });

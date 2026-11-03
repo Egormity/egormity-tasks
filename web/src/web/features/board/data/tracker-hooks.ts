@@ -21,7 +21,7 @@ import {
   updateTrackerCard,
   updateTrackerColumn,
   updateTrackerDivider,
-  updateTrackerTag,
+  updateTrackerTags,
   uploadTrackerCardAttachment,
 } from "./tracker-api";
 import { refreshTrackerBoard, trackerBoardQuery } from "./tracker-query";
@@ -146,16 +146,10 @@ export const useCreateTrackerTag = () => {
   });
 };
 
-export const useUpdateTrackerTag = () => {
+export const useUpdateTrackerTags = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({
-      id,
-      input,
-    }: {
-      id: string;
-      input: { name?: string | undefined; tone?: TaskTagTone | undefined };
-    }) => updateTrackerTag(id, input),
+    mutationFn: updateTrackerTags,
     onSuccess: () => invalidateTracker(queryClient),
   });
 };

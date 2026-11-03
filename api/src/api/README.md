@@ -30,3 +30,5 @@ writes validate against the live column list. Keep IDs stable for existing task 
 prevent deletion while any active or archived tasks or dividers still reference a column.
 Tag colors preserve the existing named tones while also accepting validated `#RRGGBB` values from
 the Web color picker.
+
+Tag manager edits are submitted to `POST /board/tags/batch`. The API validates the entire batch and saves it in one transaction, preserving existing task-to-tag assignments. A rejected batch leaves the edits unsaved; creation and deletion remain separate actions.

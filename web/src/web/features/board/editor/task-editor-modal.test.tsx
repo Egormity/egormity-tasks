@@ -37,7 +37,7 @@ it("keeps the original separate read and edit views, saving title and descriptio
     onOpenChange: vi.fn(),
     onCreateTag: vi.fn(),
     onDeleteTag: vi.fn(),
-    onUpdateTag: vi.fn(),
+    onUpdateTags: vi.fn(),
     onRequestEdit,
     onSave,
     open: true,
@@ -101,7 +101,7 @@ it("defaults new tasks to Backlog and saves the selected column", () => {
         onOpenChange={vi.fn()}
         onCreateTag={vi.fn()}
         onDeleteTag={vi.fn()}
-        onUpdateTag={vi.fn()}
+        onUpdateTags={vi.fn()}
         onSave={onSave}
         open
         tags={[]}
@@ -132,7 +132,7 @@ it("renders the task description as markdown in view mode", () => {
         onDeleteTag={vi.fn()}
         onRequestEdit={vi.fn()}
         onSave={vi.fn()}
-        onUpdateTag={vi.fn()}
+        onUpdateTags={vi.fn()}
         open
         tags={[]}
         task={{ ...task, description: "**Bold** description with `code`." }}
@@ -162,7 +162,7 @@ it("shows read-only tags beside the task title in view mode", () => {
         onDeleteTag={vi.fn()}
         onRequestEdit={vi.fn()}
         onSave={vi.fn()}
-        onUpdateTag={vi.fn()}
+        onUpdateTags={vi.fn()}
         open
         tags={[{ id: "tag", name: "Platform", tone: "blue", usageCount: 0 }]}
         task={taggedTask}

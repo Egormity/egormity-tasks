@@ -6,6 +6,7 @@ import type {
   Task as StoredTask,
   TaskEvent,
   TaskTag,
+  TagBatchUpdate,
   TaskUpdate,
 } from "@contracts/board.js";
 
@@ -240,20 +241,8 @@ export const createTrackerTag = async (name: string, tone: TaskTagTone = "green"
   usageCount: 0,
 });
 
-export const updateTrackerTag = async (
-  id: string,
-  input: TrackerTagUpdate,
-): Promise<TrackerTag> => {
-  const tag = snapshot.tags.find((item) => item.id === id);
-  if (!tag) throw new Error("Tag not found.");
-  return {
-    ...(await request<TaskTag>(`/board/tags/${encodeURIComponent(id)}`, {
-      name: input.name ?? tag.name,
-      tone: input.tone ?? tag.tone,
-    })),
-    usageCount: snapshot.cards.filter((card) => card.tagIds.includes(id)).length,
-  };
-};
+export const updateTrackerTags = (tags: readonly TagBatchUpdate[]) =>
+  request<TaskTag[]>("/board/tags/batch", { tags });
 
 export const deleteTrackerTag = (id: string) =>
   request<{ id: string; removedCards: number }>(

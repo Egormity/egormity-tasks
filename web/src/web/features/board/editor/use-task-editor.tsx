@@ -12,7 +12,8 @@ import {
 } from "@/features/board/data/task-data";
 import { TaskEditorModal, type TaskEditorValues } from "./task-editor-modal";
 import { downloadTaskExportArchive } from "@/features/board/data/task-export";
-import type { TrackerTag, TrackerTagUpdate } from "@/features/board/data/tracker-api";
+import type { TrackerTag } from "@/features/board/data/tracker-api";
+import type { TagBatchUpdate } from "@contracts/board.js";
 import {
   useArchiveTrackerCard,
   useCreateTrackerCard,
@@ -22,7 +23,7 @@ import {
   useTrackerEvents,
   useTrackerTags,
   useUpdateTrackerCard,
-  useUpdateTrackerTag,
+  useUpdateTrackerTags,
   useUploadTrackerCardAttachment,
 } from "@/features/board/data/tracker-hooks";
 import { boardText } from "@/features/board/i18n/board-copy";
@@ -49,7 +50,7 @@ export const useTaskEditor = (
   const restoreCard = useRestoreTrackerCard();
   const createTag = useCreateTrackerTag();
   const deleteTag = useDeleteTrackerTag();
-  const updateTag = useUpdateTrackerTag();
+  const updateTags = useUpdateTrackerTags();
   const tags = tagsQuery.data?.items ?? [];
   const liveTask =
     useQuery({
@@ -196,18 +197,14 @@ export const useTaskEditor = (
     }
   };
 
-  const handleUpdateTag = async (id: string, input: TrackerTagUpdate) => {
+  const handleUpdateTags = async (tags: readonly TagBatchUpdate[]) => {
     try {
-      const updated = await updateTag.mutateAsync({ id, input });
-      toast.success(
-        input.name !== undefined
-          ? boardText("Тег «{0}» изменён", updated.name)
-          : boardText("Цвет тега «{0}» изменён", updated.name),
-      );
-      return updated;
+      await updateTags.mutateAsync(tags);
+      toast.success(boardText("Изменения тегов сохранены"));
+      return true;
     } catch {
-      toast.error(boardText("Не удалось изменить цвет тега"));
-      return undefined;
+      toast.error(boardText("Не удалось сохранить изменения тегов"));
+      return false;
     }
   };
 
@@ -256,7 +253,7 @@ export const useTaskEditor = (
             }}
             onRequestEdit={viewedTask ? () => openEdit(viewedTask) : undefined}
             onSave={(values) => void handleSave(values)}
-            onUpdateTag={handleUpdateTag}
+            onUpdateTags={handleUpdateTags}
             open
             tags={tags}
             task={viewedTask}

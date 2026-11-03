@@ -72,6 +72,13 @@ export class BoardRepository {
     );
   };
 
+  reserveTagName = async (id: string, temporaryName: string) => {
+    await this.executor.query("UPDATE task_tags SET name = $1 WHERE id = $2", [
+      temporaryName,
+      id,
+    ]);
+  };
+
   deleteTag = async (id: string) => {
     await this.executor.query("DELETE FROM task_tags WHERE id = $1", [id]);
   };

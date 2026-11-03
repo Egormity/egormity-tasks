@@ -6,6 +6,7 @@ import { z } from "zod";
 import {
   attachmentSchema,
   tagInputSchema,
+  tagBatchUpdateSchema,
   taskInputSchema,
   taskUpdateSchema,
 } from "../contracts/board.js";
@@ -107,6 +108,10 @@ export const boardRoutes = (store: BoardStore, events: BoardEvents) => {
       .status(201)
       .json(changed(await store.saveTag(parse(tagInputSchema, request.body)))),
   );
+  router.post("/tags/batch", async (request, response) => {
+    const { tags } = parse(tagBatchUpdateSchema, request.body);
+    response.json(changed(await store.updateTags(tags)));
+  });
   router.post("/tags/:id", async (request, response) => {
     if (!(await store.tags()).some((tag) => tag.id === request.params.id))
       throw new HttpError(404, "Tag not found.");

@@ -7,6 +7,7 @@ import type {
   TaskEvent,
   TaskInput,
   TaskTag,
+  TagBatchUpdate,
   TaskUpdate,
 } from "../contracts/board.js";
 import { taskSchema } from "../contracts/board.js";
@@ -239,6 +240,32 @@ export class BoardStore {
       const tag = { ...input, id };
       await repository.saveTag(tag);
       return tag;
+    });
+
+  updateTags = (updates: TagBatchUpdate[]) =>
+    this.db.transaction(async (executor) => {
+      const repository = new BoardRepository(executor);
+      const existing = await repository.tags();
+      const byId = new Map(existing.map((tag) => [tag.id, tag]));
+      if (new Set(updates.map((update) => update.id)).size !== updates.length)
+        throw new HttpError(400, "A tag cannot be updated twice.");
+      const changed = updates.map(({ id, ...input }) => {
+        const tag = byId.get(id);
+        if (!tag) throw new HttpError(404, "Tag not found.");
+        return { ...tag, name: input.name ?? tag.name, tone: input.tone ?? tag.tone };
+      });
+      const changes = new Map(changed.map((tag) => [tag.id, tag]));
+      const finalTags = existing.map((tag) => changes.get(tag.id) ?? tag);
+      if (new Set(finalTags.map((tag) => tag.name)).size !== finalTags.length)
+        throw new HttpError(409, "A tag with this name already exists.");
+
+      // Temporarily free names so a batch can exchange names without violating uniqueness.
+      for (const tag of changed) {
+        if (tag.name !== byId.get(tag.id)?.name)
+          await repository.reserveTagName(tag.id, `__tag_batch_${randomUUID()}`);
+      }
+      for (const tag of changed) await repository.saveTag(tag);
+      return changed;
     });
 
   deleteTag = (id: string, actor: string) =>

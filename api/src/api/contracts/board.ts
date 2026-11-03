@@ -22,6 +22,14 @@ export const tagInputSchema = z
 
 export const tagSchema = tagInputSchema.extend({ id });
 
+export const tagBatchUpdateSchema = z
+  .object({
+    tags: z.array(tagInputSchema.partial().extend({ id })).min(1).max(500),
+  })
+  .strict();
+
+export type TagBatchUpdate = z.infer<typeof tagBatchUpdateSchema>["tags"][number];
+
 export const attachmentSchema = z
   .object({
     id,
